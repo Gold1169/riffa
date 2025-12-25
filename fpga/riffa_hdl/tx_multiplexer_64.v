@@ -40,20 +40,20 @@
 // RIFFA channels in round robin order.
 // Author: Dustin Richmond (@darichmond) 
 // ----------------------------------------------------------------------
-`define FMT_TXENGUPR64_WR32	7'b10_00000
-`define FMT_TXENGUPR64_RD32	7'b00_00000
-`define FMT_TXENGUPR64_WR64	7'b11_00000
-`define FMT_TXENGUPR64_RD64	7'b01_00000
+`define FMT_TXENGUPR64_WR32   7'b10_00000
+`define FMT_TXENGUPR64_RD32   7'b00_00000
+`define FMT_TXENGUPR64_WR64   7'b11_00000
+`define FMT_TXENGUPR64_RD64   7'b01_00000
 
-`define S_TXENGUPR64_MAIN_IDLE		4'b0001
-`define S_TXENGUPR64_MAIN_RD		4'b0010
-`define S_TXENGUPR64_MAIN_WR		4'b0100
-`define S_TXENGUPR64_MAIN_WAIT		4'b1000
+`define S_TXENGUPR64_MAIN_IDLE  4'b0001
+`define S_TXENGUPR64_MAIN_RD    4'b0010
+`define S_TXENGUPR64_MAIN_WR    4'b0100
+`define S_TXENGUPR64_MAIN_WAIT  4'b1000
 
-`define S_TXENGUPR64_CAP_RD_WR		4'b0001
-`define S_TXENGUPR64_CAP_WR_RD		4'b0010
-`define S_TXENGUPR64_CAP_CAP		4'b0100
-`define S_TXENGUPR64_CAP_REL		4'b1000
+`define S_TXENGUPR64_CAP_RD_WR  4'b0001
+`define S_TXENGUPR64_CAP_WR_RD  4'b0010
+`define S_TXENGUPR64_CAP_CAP    4'b0100
+`define S_TXENGUPR64_CAP_REL    4'b1000
 `include "trellis.vh"
 `timescale 1ns/1ns
 module tx_multiplexer_64
@@ -159,17 +159,17 @@ module tx_multiplexer_64
 
     (* syn_encoding = "user" *)
     (* fsm_encoding = "user" *)
-    reg		[3:0]						rCapState=`S_TXENGUPR64_CAP_RD_WR, _rCapState=`S_TXENGUPR64_CAP_RD_WR;
-    reg [C_NUM_CHNL-1:0]                rRdAck=0, _rRdAck=0;
-    reg [C_NUM_CHNL-1:0]                rWrAck=0, _rWrAck=0;
-    reg 								rIsWr=0, _rIsWr=0;
-    reg [5:0]                           rCapChnl=0, _rCapChnl=0;
-    reg [61:0]                          rCapAddr=62'd0, _rCapAddr=62'd0;
-    reg 								rCapAddr64=0, _rCapAddr64=0;
-    reg [9:0]                           rCapLen=0, _rCapLen=0;
-    reg 								rCapIsWr=0, _rCapIsWr=0;
-    reg 								rExtTagReq=0, _rExtTagReq=0;
-    reg [C_TAG_WIDTH-1:0]               rExtTag=0, _rExtTag=0;
+    reg      [3:0]              rCapState=`S_TXENGUPR64_CAP_RD_WR, _rCapState=`S_TXENGUPR64_CAP_RD_WR;
+    reg [C_NUM_CHNL-1:0]        rRdAck=0, _rRdAck=0;
+    reg [C_NUM_CHNL-1:0]        rWrAck=0, _rWrAck=0;
+    reg                         rIsWr=0, _rIsWr=0;
+    reg [5:0]                   rCapChnl=0, _rCapChnl=0;
+    reg [61:0]                  rCapAddr=62'd0, _rCapAddr=62'd0;
+    reg                         rCapAddr64=0, _rCapAddr64=0;
+    reg [9:0]                   rCapLen=0, _rCapLen=0;
+    reg                         rCapIsWr=0, _rCapIsWr=0;
+    reg                         rExtTagReq=0, _rExtTagReq=0;
+    reg [C_TAG_WIDTH-1:0]       rExtTag=0, _rExtTag=0;
 
     reg [C_DATA_DELAY-1:0]              rWnR=0, _rWnR=0;
     reg [(C_DATA_DELAY*4)-1:0]          rChnl=0, _rChnl=0;
@@ -256,50 +256,50 @@ module tx_multiplexer_64
 
         case (rCapState) 
 
-	        `S_TXENGUPR64_CAP_RD_WR : begin
-	            _rIsWr = !wRdReq;
-	            _rRdAck = (wRdAck<<wRdReqChnl);
-	            _rTxEngRdReqAck = wRdAck;
-	            _rExtTagReq = wRdAck;
-	            _rCapState = (wRdAck ? `S_TXENGUPR64_CAP_CAP : `S_TXENGUPR64_CAP_WR_RD);
-	        end
+           `S_TXENGUPR64_CAP_RD_WR : begin
+               _rIsWr = !wRdReq;
+               _rRdAck = (wRdAck<<wRdReqChnl);
+               _rTxEngRdReqAck = wRdAck;
+               _rExtTagReq = wRdAck;
+               _rCapState = (wRdAck ? `S_TXENGUPR64_CAP_CAP : `S_TXENGUPR64_CAP_WR_RD);
+           end
 
-	        `S_TXENGUPR64_CAP_WR_RD : begin
-	            _rIsWr = wWrReq;
-	            _rWrAck = (wWrReq<<wWrReqChnl);
-	            _rCapState = (wWrReq ? `S_TXENGUPR64_CAP_CAP : `S_TXENGUPR64_CAP_RD_WR);
-	        end
+           `S_TXENGUPR64_CAP_WR_RD : begin
+               _rIsWr = wWrReq;
+               _rWrAck = (wWrReq<<wWrReqChnl);
+               _rCapState = (wWrReq ? `S_TXENGUPR64_CAP_CAP : `S_TXENGUPR64_CAP_RD_WR);
+           end
 
-	        `S_TXENGUPR64_CAP_CAP : begin
-	            _rTxEngRdReqAck = 0;
-	            _rRdAck = 0;
-	            _rWrAck = 0;
-	            _rCapIsWr = rIsWr;
-	            _rExtTagReq = 0;
-	            _rExtTag = EXT_TAG;
-	            if (rIsWr) begin
-	                _rCapChnl = {2'd0, rWrChnl};
-	                _rCapAddr = rWrAddr;
-	                _rCapLen = rWrLen;
-	            end
-	            else begin
-	                _rCapChnl = {rRdSgChnl, rRdChnl};
-	                _rCapAddr = rRdAddr;
-	                _rCapLen = rRdLen;
-	            end
-	            _rCapState = `S_TXENGUPR64_CAP_REL;
-	        end
-	        
-	        `S_TXENGUPR64_CAP_REL : begin
-	            // Push into the formatting pipeline when ready
-	            if (TXR_META_READY & rMainState[0]) // S_TXENGUPR64_MAIN_IDLE
-	                _rCapState = (`S_TXENGUPR64_CAP_WR_RD>>(rCapIsWr)); // Changes to S_TXENGUPR64_CAP_RD_WR
-	        end
-	        
-	        default : begin
-	            _rCapState = `S_TXENGUPR64_CAP_RD_WR;
-	        end
-	        
+           `S_TXENGUPR64_CAP_CAP : begin
+               _rTxEngRdReqAck = 0;
+               _rRdAck = 0;
+               _rWrAck = 0;
+               _rCapIsWr = rIsWr;
+               _rExtTagReq = 0;
+               _rExtTag = EXT_TAG;
+               if (rIsWr) begin
+                   _rCapChnl = {2'd0, rWrChnl};
+                   _rCapAddr = rWrAddr;
+                   _rCapLen = rWrLen;
+               end
+               else begin
+                   _rCapChnl = {rRdSgChnl, rRdChnl};
+                   _rCapAddr = rRdAddr;
+                   _rCapLen = rRdLen;
+               end
+               _rCapState = `S_TXENGUPR64_CAP_REL;
+           end
+           
+           `S_TXENGUPR64_CAP_REL : begin
+               // Push into the formatting pipeline when ready
+               if (TXR_META_READY & rMainState[0]) // S_TXENGUPR64_MAIN_IDLE
+                   _rCapState = (`S_TXENGUPR64_CAP_WR_RD>>(rCapIsWr)); // Changes to S_TXENGUPR64_CAP_RD_WR
+           end
+           
+           default : begin
+               _rCapState = `S_TXENGUPR64_CAP_RD_WR;
+           end
+           
         endcase
     end
 
@@ -335,42 +335,42 @@ module tx_multiplexer_64
         _rCountValid = rCountValid;
         case (rMainState) 
 
-	        `S_TXENGUPR64_MAIN_IDLE : begin
-                _rCountIsWr = rCapIsWr;
-                _rCountLen = rCapLen;
-	            _rCount = rCapLen;
-	            _rCountDone = (rCapLen <= 2'd2);
-	            _rCountChnl = rCapChnl[3:0];
-	            _rCountTag = rExtTag;
-	            _rCountOdd32 = (rCapLen[0] & ((rCapAddr[61:30] == 0)));
-	            _rWrDataRen = ((TXR_META_READY & rCapState[3] & rCapIsWr)<<(rCapChnl[3:0])); // S_TXENGUPR64_CAP_REL
-                _rCountStart = (TXR_META_READY & rCapState[3]);
-                _rCountValid = TXR_META_READY & rCapState[3];
-	            if (TXR_META_READY & rCapState[3]) // S_TXENGUPR64_CAP_REL
-	                _rMainState = (`S_TXENGUPR64_MAIN_RD<<(rCapIsWr)); // Change to S_TXENGUPR64_MAIN_WR;
-	        end
+           `S_TXENGUPR64_MAIN_IDLE : begin
+               _rCountIsWr = rCapIsWr;
+               _rCountLen = rCapLen;
+               _rCount = rCapLen;
+               _rCountDone = (rCapLen <= 2'd2);
+               _rCountChnl = rCapChnl[3:0];
+               _rCountTag = rExtTag;
+               _rCountOdd32 = (rCapLen[0] & ((rCapAddr[61:30] == 0)));
+               _rWrDataRen = ((TXR_META_READY & rCapState[3] & rCapIsWr)<<(rCapChnl[3:0])); // S_TXENGUPR64_CAP_REL
+               _rCountStart = (TXR_META_READY & rCapState[3]);
+               _rCountValid = TXR_META_READY & rCapState[3];
+               if (TXR_META_READY & rCapState[3]) // S_TXENGUPR64_CAP_REL
+                  _rMainState = (`S_TXENGUPR64_MAIN_RD<<(rCapIsWr)); // Change to S_TXENGUPR64_MAIN_WR;
+           end
 
-	        `S_TXENGUPR64_MAIN_RD : begin
-	            _rMainState = `S_TXENGUPR64_MAIN_IDLE;
-	        end
+           `S_TXENGUPR64_MAIN_RD : begin
+               _rMainState = `S_TXENGUPR64_MAIN_IDLE;
+           end
 
-	        `S_TXENGUPR64_MAIN_WR : begin
-	            _rCount = rCount - 2'd2;
-	            _rCountDone = (rCount <= 3'd4);
-	            if (rCountDone) begin
-	                _rWrDataRen = 0;
-                    _rCountValid = 0;
-	                _rMainState = (rCountOdd32 ? `S_TXENGUPR64_MAIN_IDLE : `S_TXENGUPR64_MAIN_WAIT);
-	            end
-	        end
-	        `S_TXENGUPR64_MAIN_WAIT : begin // Signals request FIFO ren
-	            _rMainState = `S_TXENGUPR64_MAIN_IDLE;
-	        end
+           `S_TXENGUPR64_MAIN_WR : begin
+               _rCount = rCount - 2'd2;
+               _rCountDone = (rCount <= 3'd4);
+               if (rCountDone) begin
+                  _rWrDataRen = 0;
+                  _rCountValid = 0;
+                  _rMainState = (rCountOdd32 ? `S_TXENGUPR64_MAIN_IDLE : `S_TXENGUPR64_MAIN_WAIT);
+               end
+           end
+           `S_TXENGUPR64_MAIN_WAIT : begin // Signals request FIFO ren
+               _rMainState = `S_TXENGUPR64_MAIN_IDLE;
+           end
 
-	        default : begin
-	            _rMainState = `S_TXENGUPR64_MAIN_IDLE;
-	        end
-	        
+           default : begin
+               _rMainState = `S_TXENGUPR64_MAIN_IDLE;
+           end
+           
         endcase
     end
 

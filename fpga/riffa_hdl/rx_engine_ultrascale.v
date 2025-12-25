@@ -118,8 +118,8 @@ module rx_engine_ultrascale
     rxc_engine_ultrascale
         #(///*AUTOINSTPARAM*/
           // Parameters
-          .C_PCI_DATA_WIDTH		(C_PCI_DATA_WIDTH),
-          .C_RX_PIPELINE_DEPTH		(C_RX_PIPELINE_DEPTH))
+          .C_PCI_DATA_WIDTH      (C_PCI_DATA_WIDTH),
+          .C_RX_PIPELINE_DEPTH   (C_RX_PIPELINE_DEPTH))
     rxc_engine_inst
         (/*AUTOINST*/
          // Outputs

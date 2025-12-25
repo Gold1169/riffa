@@ -175,9 +175,9 @@ module rxc_engine_ultrascale
     assign RXC_META_FDWBE = 0;// TODO: Remove (use addr)
     assign RXC_META_LDWBE = 0;// TODO: Remove (use addr)
     assign RXC_META_ADDR = wRxcHdr[(`UPKT_RXC_ADDRLOW_I) +: `SIG_LOWADDR_W];
-    assign RXC_DATA_START_FLAG = wRxcDataStartFlag;                      
+    assign RXC_DATA_START_FLAG = wRxcDataStartFlag;
     assign RXC_DATA_START_OFFSET = {C_PCI_DATA_WIDTH > 64, 1'b1};
-    assign RXC_DATA_END_FLAG = wRxcDataEndFlag;                      
+    assign RXC_DATA_END_FLAG = wRxcDataEndFlag;
     assign RXC_DATA_END_OFFSET = wRxcDataEndOffset;
     assign RXC_DATA_VALID = wRxcDataValid;
     assign RXC_DATA = wRxSrData[(C_TOTAL_STAGES)*C_PCI_DATA_WIDTH +: C_PCI_DATA_WIDTH];
@@ -210,17 +210,17 @@ module rxc_engine_ultrascale
     always @(*) begin
         _rValid = rValid;
         if(_wStartFlag) begin
-	        _rValid = 1'b1;
+           _rValid = 1'b1;
         end else if (wEndFlag) begin
-	        _rValid = 1'b0;
+           _rValid = 1'b0;
         end
     end
     
     always @(posedge CLK) begin
         if(rRST) begin
-	        rValid <= 1'b0;
+           rValid <= 1'b0;
         end else begin
-	        rValid <= _rValid;
+           rValid <= _rValid;
         end
     end
 

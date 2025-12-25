@@ -48,43 +48,43 @@ module channel
      input [31:0]                  PIO_DATA, // Single word programmed I/O data
      input [C_DATA_WIDTH-1:0]      ENG_DATA, // Main incoming data 
 
-     output                        SG_RX_BUF_RECVD, // Scatter gather RX buffer completely read (ready for next if applicable)
      input                         SG_RX_BUF_LEN_VALID, // Scatter gather RX buffer length valid
      input                         SG_RX_BUF_ADDR_HI_VALID, // Scatter gather RX buffer high address valid
      input                         SG_RX_BUF_ADDR_LO_VALID, // Scatter gather RX buffer low address valid
+     output                        SG_RX_BUF_RECVD, // Scatter gather RX buffer completely read (ready for next if applicable)
 
-     output                        SG_TX_BUF_RECVD, // Scatter gather TX buffer completely read (ready for next if applicable)
      input                         SG_TX_BUF_LEN_VALID, // Scatter gather TX buffer length valid
      input                         SG_TX_BUF_ADDR_HI_VALID, // Scatter gather TX buffer high address valid
      input                         SG_TX_BUF_ADDR_LO_VALID, // Scatter gather TX buffer low address valid
+     output                        SG_TX_BUF_RECVD, // Scatter gather TX buffer completely read (ready for next if applicable)
 
      input                         TXN_RX_LEN_VALID, // Read transaction length valid
      input                         TXN_RX_OFF_LAST_VALID, // Read transaction offset/last valid
+     input                         TXN_RX_DONE_ACK, // Read transaction actual transfer length read
      output [31:0]                 TXN_RX_DONE_LEN, // Read transaction actual transfer length
      output                        TXN_RX_DONE, // Read transaction done
-     input                         TXN_RX_DONE_ACK, // Read transaction actual transfer length read
 
-     output                        TXN_TX, // Write transaction notification
      input                         TXN_TX_ACK, // Write transaction acknowledged
+     input                         TXN_TX_DONE_ACK, // Write transaction actual transfer length read
+     output                        TXN_TX, // Write transaction notification
      output [31:0]                 TXN_TX_LEN, // Write transaction length
      output [31:0]                 TXN_TX_OFF_LAST, // Write transaction offset/last
      output [31:0]                 TXN_TX_DONE_LEN, // Write transaction actual transfer length
      output                        TXN_TX_DONE, // Write transaction done
-     input                         TXN_TX_DONE_ACK, // Write transaction actual transfer length read
 
-     output                        RX_REQ, // Read request
      input                         RX_REQ_ACK, // Read request accepted
+     output                        RX_REQ, // Read request
      output [1:0]                  RX_REQ_TAG, // Read request data tag 
      output [63:0]                 RX_REQ_ADDR, // Read request address
      output [9:0]                  RX_REQ_LEN, // Read request length
 
-     output                        TX_REQ, // Outgoing write request
+     input                         TX_DATA_REN, // Outgoing write data read enable
+     input                         TX_SENT, // Outgoing write complete
      input                         TX_REQ_ACK, // Outgoing write request acknowledged
+     output                        TX_REQ, // Outgoing write request
      output [63:0]                 TX_ADDR, // Outgoing write high address
      output [9:0]                  TX_LEN, // Outgoing write length (in 32 bit words)
      output [C_DATA_WIDTH-1:0]     TX_DATA, // Outgoing write data
-     input                         TX_DATA_REN, // Outgoing write data read enable
-     input                         TX_SENT, // Outgoing write complete
 
      input [C_DATA_WORD_WIDTH-1:0] MAIN_DATA_EN, // Main incoming data enable
      input                         MAIN_DONE, // Main incoming data complete
@@ -99,24 +99,24 @@ module channel
      input                         SG_TX_ERR, // Scatter gather for TX incoming data completed with error
 
      input                         CHNL_RX_CLK, // Channel read clock
-     output                        CHNL_RX, // Channel read receive signal
      input                         CHNL_RX_ACK, // Channle read received signal
+     input                         CHNL_RX_DATA_REN, // Channel read data has been recieved
+     output                        CHNL_RX, // Channel read receive signal
      output                        CHNL_RX_LAST, // Channel last read
      output [31:0]                 CHNL_RX_LEN, // Channel read length
      output [30:0]                 CHNL_RX_OFF, // Channel read offset
      output [C_DATA_WIDTH-1:0]     CHNL_RX_DATA, // Channel read data
      output                        CHNL_RX_DATA_VALID, // Channel read data valid
-     input                         CHNL_RX_DATA_REN, // Channel read data has been recieved
 
      input                         CHNL_TX_CLK, // Channel write clock
      input                         CHNL_TX, // Channel write receive signal
-     output                        CHNL_TX_ACK, // Channel write acknowledgement signal
      input                         CHNL_TX_LAST, // Channel last write
      input [31:0]                  CHNL_TX_LEN, // Channel write length (in 32 bit words)
      input [30:0]                  CHNL_TX_OFF, // Channel write offset
      input [C_DATA_WIDTH-1:0]      CHNL_TX_DATA, // Channel write data
      input                         CHNL_TX_DATA_VALID, // Channel write data valid
-     output                        CHNL_TX_DATA_REN                         // Channel write data has been recieved
+     output                        CHNL_TX_ACK, // Channel write acknowledgement signal
+     output                        CHNL_TX_DATA_REN // Channel write data has been recieved
      );
     generate
         if(C_DATA_WIDTH == 32) begin

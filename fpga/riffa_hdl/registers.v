@@ -252,7 +252,7 @@ module registers
     assign wTxcMetaAttr = wRxrMetaAttr;
     assign wTxcMetaEp = 0;
 
-    generate            
+    generate
         for(channel = 0; channel < C_NUM_CHNL ; channel = channel + 1) begin : gen__wRdMemory
             
             assign __wRdMemory[{channel[27:0] , `ADDR_TX_LEN}] = CHNL_TX_REQLEN[32*channel +: 32];

@@ -501,12 +501,14 @@ module riffa
          .CHNL_RX_DONE_READY            (wChnlRxDoneReady),
          .CHNL_NAME_READY               (wChnlNameReady), // TODO: Could do this on a per-channel basis
          // TXC Engine Interface
+         .TXC_DATA_READY                (_wTxcDataReady),
          .TXC_DATA_VALID                (_wTxcDataValid),
          .TXC_DATA                      (_wTxcData[C_PCI_DATA_WIDTH-1:0]),
          .TXC_DATA_START_FLAG           (_wTxcDataStartFlag),
          .TXC_DATA_START_OFFSET         (_wTxcDataStartOffset[clog2s(C_PCI_DATA_WIDTH/32)-1:0]),
          .TXC_DATA_END_FLAG             (_wTxcDataEndFlag),
          .TXC_DATA_END_OFFSET           (_wTxcDataEndOffset[clog2s(C_PCI_DATA_WIDTH/32)-1:0]),
+         .TXC_META_READY                (_wTxcMetaReady),
          .TXC_META_VALID                (_wTxcMetaValid),
          .TXC_META_FDWBE                (_wTxcMetaFdwbe[`SIG_FBE_W-1:0]),
          .TXC_META_LDWBE                (_wTxcMetaLdwbe[`SIG_LBE_W-1:0]),
@@ -528,8 +530,6 @@ module riffa
          .CHNL_RX_DONELEN               (wChnlRxDoneLen),
          .INTR_VECTOR                   (wIntrVector),
          .RST_IN                        (RST_OUT),
-         .TXC_DATA_READY                (_wTxcDataReady),
-         .TXC_META_READY                (_wTxcMetaReady),
          /*AUTOINST*/
          // Inputs
          .CLK                           (CLK),
@@ -565,6 +565,7 @@ module riffa
          .CONFIG_MAX_CPL_DATA           (CONFIG_MAX_CPL_DATA[11:0]),
          .CONFIG_MAX_CPL_HDR            (CONFIG_MAX_CPL_HDR[7:0]),
          .CONFIG_CPL_BOUNDARY_SEL       (CONFIG_CPL_BOUNDARY_SEL));
+
     // Connect the interrupt vector and controller.
     interrupt 
         #(.C_NUM_CHNL                   (C_NUM_CHNL)) 
@@ -602,19 +603,22 @@ module riffa
     tx_mux_inst
         (
          // Outputs
-         .WR_DATA_REN                   (wTxEngWrDataRen[C_NUM_CHNL-1:0]),
+         .WR_DATA_REN                   (wTxEngWrDataRen[C_NUM_CHNL-1:0]), // read need-write-data from channel 
          .WR_ACK                        (wTxEngWrAck[C_NUM_CHNL-1:0]),
          .RD_ACK                        (wTxEngRdAck[C_NUM_CHNL-1:0]),
          .INT_TAG                       (wInternalTag[5:0]),
          .INT_TAG_VALID                 (wInternalTagValid),
          .TX_ENG_RD_REQ_SENT            (wTxEngRdReqSent),
          // Inputs
+         // wr req from channels
          .RST_IN                        (RST_OUT),
+
          .WR_REQ                        (wTxEngWrReq[C_NUM_CHNL-1:0]),
          .WR_ADDR                       (wTxEngWrAddr[(C_NUM_CHNL*`SIG_ADDR_W)-1:0]),
          .WR_LEN                        (wTxEngWrLen[(C_NUM_CHNL*`SIG_LEN_W)-1:0]),
          .WR_DATA                       (wTxEngWrData[(C_NUM_CHNL*C_PCI_DATA_WIDTH)-1:0]),
          .WR_SENT                       (wTxEngWrSent[C_NUM_CHNL-1:0]),
+          // rd req from channels
          .RD_REQ                        (wTxEngRdReq[C_NUM_CHNL-1:0]),
          .RD_SG_CHNL                    (wTxEngRdSgChnl[(C_NUM_CHNL*2)-1:0]),
          .RD_ADDR                       (wTxEngRdAddr[(C_NUM_CHNL*`SIG_ADDR_W)-1:0]),
@@ -624,12 +628,14 @@ module riffa
          .RXBUF_SPACE_AVAIL             (wRxBufSpaceAvail),
          /*AUTOINST*/
          // Outputs
+         .TXR_DATA_READY                (TXR_DATA_READY),
          .TXR_DATA_VALID                (TXR_DATA_VALID),
          .TXR_DATA                      (TXR_DATA[C_PCI_DATA_WIDTH-1:0]),
          .TXR_DATA_START_FLAG           (TXR_DATA_START_FLAG),
          .TXR_DATA_START_OFFSET         (TXR_DATA_START_OFFSET[clog2s(C_PCI_DATA_WIDTH/32)-1:0]),
          .TXR_DATA_END_FLAG             (TXR_DATA_END_FLAG),
          .TXR_DATA_END_OFFSET           (TXR_DATA_END_OFFSET[clog2s(C_PCI_DATA_WIDTH/32)-1:0]),
+         .TXR_META_READY                (TXR_META_READY),
          .TXR_META_VALID                (TXR_META_VALID),
          .TXR_META_FDWBE                (TXR_META_FDWBE[`SIG_FBE_W-1:0]),
          .TXR_META_LDWBE                (TXR_META_LDWBE[`SIG_LBE_W-1:0]),
@@ -642,98 +648,97 @@ module riffa
          .TXR_META_EP                   (TXR_META_EP),
          // Inputs
          .CLK                           (CLK),
-         .TXR_DATA_READY                (TXR_DATA_READY),
-         .TXR_META_READY                (TXR_META_READY),
          .TXR_SENT                      (TXR_SENT));
     
     // Generate and link up the channels.
     generate
         for (i = 0; i < C_NUM_CHNL; i = i + 1) begin : channels
-            channel 
-                 #(
+            channel #(
                    .C_DATA_WIDTH(C_PCI_DATA_WIDTH), 
-                   .C_MAX_READ_REQ(C_MAX_READ_REQ)
-                   )
-            channel 
-                 (
-                  .RST(RST_OUT),
-                  .CLK(CLK), 
-                  .CONFIG_MAX_READ_REQUEST_SIZE(CONFIG_MAX_READ_REQUEST_SIZE), 
-                  .CONFIG_MAX_PAYLOAD_SIZE(CONFIG_MAX_PAYLOAD_SIZE), 
+                   .C_MAX_READ_REQ(C_MAX_READ_REQ))
+            channel (
+                  .CLK                            (CLK), 
+                  .RST                            (RST_OUT),
+                  .CONFIG_MAX_READ_REQUEST_SIZE   (CONFIG_MAX_READ_REQUEST_SIZE), 
+                  .CONFIG_MAX_PAYLOAD_SIZE        (CONFIG_MAX_PAYLOAD_SIZE), 
 
-                  .PIO_DATA(wChnlReqData), 
-                  .ENG_DATA(wRxEngData), 
                 
-                  .SG_RX_BUF_RECVD(wChnlSgRxBufRecvd[i]),
-                  .SG_TX_BUF_RECVD(wChnlSgTxBufRecvd[i]),
-                  .TXN_TX(wChnlTxRequest[i]),
-                  .TXN_TX_DONE(wChnlTxDone[i]),
-                  .TXN_RX_DONE(wChnlRxDone[i]),
-                
-                  .SG_RX_BUF_LEN_VALID(wChnlSgRxLenValid[i]),
-                  .SG_RX_BUF_ADDR_HI_VALID(wChnlSgRxAddrHiValid[i]),
-                  .SG_RX_BUF_ADDR_LO_VALID(wChnlSgRxAddrLoValid[i]),
-                
-                  .SG_TX_BUF_LEN_VALID(wChnlSgTxLenValid[i]),
-                  .SG_TX_BUF_ADDR_HI_VALID(wChnlSgTxAddrHiValid[i]),
-                  .SG_TX_BUF_ADDR_LO_VALID(wChnlSgTxAddrLoValid[i]),
-                
-                  .TXN_RX_LEN_VALID(wChnlRxLenValid[i]), 
-                  .TXN_RX_OFF_LAST_VALID(wChnlRxOfflastValid[i]), 
-                  .TXN_RX_DONE_LEN(wChnlRxDoneLen[(`SIG_RXDONELEN_W*i) +: `SIG_RXDONELEN_W]),
-                  .TXN_RX_DONE_ACK(wChnlRxDoneReady[i]),
-                
-                  .TXN_TX_ACK(wChnlTxLenReady[i]), // ACK'd on length read
-                  .TXN_TX_LEN(wChnlTxReqLen[(`SIG_TXRLEN_W*i) +: `SIG_TXRLEN_W]),
-                  .TXN_TX_OFF_LAST(wChnlTxOfflast[(`SIG_OFFLAST_W*i) +: `SIG_OFFLAST_W]),
-                  .TXN_TX_DONE_LEN(wChnlTxDoneLen[(`SIG_TXDONELEN_W*i) +:`SIG_TXDONELEN_W]),
-                  .TXN_TX_DONE_ACK(wChnlTxDoneReady[i]),
-                
-                  .RX_REQ(wTxEngRdReq[i]),
-                  .RX_REQ_ACK(wTxEngRdAck[i]),
-                  .RX_REQ_TAG(wTxEngRdSgChnl[(2*i) +:2]),// TODO: `SIG_INTERNALTAG_W
-                  .RX_REQ_ADDR(wTxEngRdAddr[(`SIG_ADDR_W*i) +:`SIG_ADDR_W]),
-                  .RX_REQ_LEN(wTxEngRdLen[(`SIG_LEN_W*i) +:`SIG_LEN_W]),
+                  // input interface
+                  .PIO_DATA                       (wChnlReqData), // receive sg/rx info data
 
-                  .TX_REQ(wTxEngWrReq[i]), 
-                  .TX_REQ_ACK(wTxEngWrAck[i]),
-                  .TX_ADDR(wTxEngWrAddr[(`SIG_ADDR_W*i) +: `SIG_ADDR_W]), 
-                  .TX_LEN(wTxEngWrLen[(`SIG_LEN_W*i) +: `SIG_LEN_W]), 
-                  .TX_DATA(wTxEngWrData[(C_PCI_DATA_WIDTH*i) +:C_PCI_DATA_WIDTH]),
-                  .TX_DATA_REN(wTxEngWrDataRen[i]), 
-                  .TX_SENT(wTxEngWrSent[i]),
+                  .SG_RX_BUF_LEN_VALID            (wChnlSgRxLenValid[i]),    // i
+                  .SG_RX_BUF_ADDR_HI_VALID        (wChnlSgRxAddrHiValid[i]), // i
+                  .SG_RX_BUF_ADDR_LO_VALID        (wChnlSgRxAddrLoValid[i]), // i
+                  .SG_RX_BUF_RECVD                (wChnlSgRxBufRecvd[i]),    // o
                 
-                  .MAIN_DATA_EN(wRxEngMainDataEn[(C_PCI_DATA_WORD_WIDTH*i) +:C_PCI_DATA_WORD_WIDTH]), 
-                  .MAIN_DONE(wRxEngMainDone[i]), 
-                  .MAIN_ERR(wRxEngMainErr[i]),
-                
-                  .SG_RX_DATA_EN(wRxEngSgRxDataEn[(C_PCI_DATA_WORD_WIDTH*i) +:C_PCI_DATA_WORD_WIDTH]),  
-                  .SG_RX_DONE(wRxEngSgRxDone[i]), 
-                  .SG_RX_ERR(wRxEngSgRxErr[i]),
+                  .SG_TX_BUF_LEN_VALID            (wChnlSgTxLenValid[i]),    // i
+                  .SG_TX_BUF_ADDR_HI_VALID        (wChnlSgTxAddrHiValid[i]), // i
+                  .SG_TX_BUF_ADDR_LO_VALID        (wChnlSgTxAddrLoValid[i]), // i
+                  .SG_TX_BUF_RECVD                (wChnlSgTxBufRecvd[i]),    // o
+                  // input read transaction to channel
+                  .TXN_RX_LEN_VALID               (wChnlRxLenValid[i]),      // i
+                  .TXN_RX_OFF_LAST_VALID          (wChnlRxOfflastValid[i]),  // i
+                  .TXN_RX_DONE_LEN                (wChnlRxDoneLen[(`SIG_RXDONELEN_W*i) +: `SIG_RXDONELEN_W]),   // i
+                  .TXN_RX_DONE                    (wChnlRxDone[i]),          // o
+                  .TXN_RX_DONE_ACK                (wChnlRxDoneReady[i]),     // o
+                  // output write transaction from channel
+                  .TXN_TX_ACK                     (wChnlTxLenReady[i]), // ACK'd on length read
+                  .TXN_TX_DONE_ACK                (wChnlTxDoneReady[i]),
+                  .TXN_TX                         (wChnlTxRequest[i]),
+                  .TXN_TX_DONE                    (wChnlTxDone[i]),
+                  .TXN_TX_LEN                     (wChnlTxReqLen[(`SIG_TXRLEN_W*i) +: `SIG_TXRLEN_W]),
+                  .TXN_TX_OFF_LAST                (wChnlTxOfflast[(`SIG_OFFLAST_W*i) +: `SIG_OFFLAST_W]),
+                  .TXN_TX_DONE_LEN                (wChnlTxDoneLen[(`SIG_TXDONELEN_W*i) +:`SIG_TXDONELEN_W]),
+                  // output read req from channel
+                  .RX_REQ_ACK                     (wTxEngRdAck[i]), // i
+                  .RX_REQ                         (wTxEngRdReq[i]), // o send rd req to enging
+                  .RX_REQ_TAG                     (wTxEngRdSgChnl[(2*i) +:2]), // o // TODO: `SIG_INTERNALTAG_W
+                  .RX_REQ_ADDR                    (wTxEngRdAddr[(`SIG_ADDR_W*i) +:`SIG_ADDR_W]),  // o
+                  .RX_REQ_LEN                     (wTxEngRdLen[(`SIG_LEN_W*i) +:`SIG_LEN_W]),     // o
+                  // output write req from channel
+                  .TX_DATA_REN                    (wTxEngWrDataRen[i]),   // i
+                  .TX_SENT                        (wTxEngWrSent[i]),      // i
+                  .TX_REQ_ACK                     (wTxEngWrAck[i]),       // i
+                  .TX_REQ                         (wTxEngWrReq[i]),       // o
+                  .TX_ADDR                        (wTxEngWrAddr[(`SIG_ADDR_W*i) +: `SIG_ADDR_W]), // o
+                  .TX_LEN                         (wTxEngWrLen[(`SIG_LEN_W*i) +: `SIG_LEN_W]),    // o
+                  .TX_DATA                        (wTxEngWrData[(C_PCI_DATA_WIDTH*i) +:C_PCI_DATA_WIDTH]), // o
+                  //input interface
+                  // host return main data 
+                  .ENG_DATA                       (wRxEngData),   // receive host-return data
 
-                  .SG_TX_DATA_EN(wRxEngSgTxDataEn[(C_PCI_DATA_WORD_WIDTH*i) +:C_PCI_DATA_WORD_WIDTH]), 
-                  .SG_TX_DONE(wRxEngSgTxDone[i]), 
-                  .SG_TX_ERR(wRxEngSgTxErr[i]),
+                  .MAIN_DATA_EN                   (wRxEngMainDataEn[(C_PCI_DATA_WORD_WIDTH*i) +:C_PCI_DATA_WORD_WIDTH]), 
+                  .MAIN_DONE                      (wRxEngMainDone[i]), 
+                  .MAIN_ERR                       (wRxEngMainErr[i]),
+                  // host return sg-rx data
+                  .SG_RX_DATA_EN                  (wRxEngSgRxDataEn[(C_PCI_DATA_WORD_WIDTH*i) +:C_PCI_DATA_WORD_WIDTH]),  
+                  .SG_RX_DONE                     (wRxEngSgRxDone[i]), 
+                  .SG_RX_ERR                      (wRxEngSgRxErr[i]),
+                  // host return sg-tx data (output req throuth channel tx port)
+                  .SG_TX_DATA_EN                  (wRxEngSgTxDataEn[(C_PCI_DATA_WORD_WIDTH*i) +:C_PCI_DATA_WORD_WIDTH]), 
+                  .SG_TX_DONE                     (wRxEngSgTxDone[i]), 
+                  .SG_TX_ERR                      (wRxEngSgTxErr[i]),
 
-                  .CHNL_RX_CLK(CHNL_RX_CLK[i]), 
-                  .CHNL_RX(CHNL_RX[i]), 
-                  .CHNL_RX_ACK(CHNL_RX_ACK[i]), 
-                  .CHNL_RX_LAST(CHNL_RX_LAST[i]), 
-                  .CHNL_RX_LEN(CHNL_RX_LEN[(32*i) +:32]), 
-                  .CHNL_RX_OFF(CHNL_RX_OFF[(31*i) +:31]), 
-                  .CHNL_RX_DATA(CHNL_RX_DATA[(C_PCI_DATA_WIDTH*i) +:C_PCI_DATA_WIDTH]), 
-                  .CHNL_RX_DATA_VALID(CHNL_RX_DATA_VALID[i]), 
-                  .CHNL_RX_DATA_REN(CHNL_RX_DATA_REN[i]),
-
-                  .CHNL_TX_CLK(CHNL_TX_CLK[i]), 
-                  .CHNL_TX(CHNL_TX[i]), 
-                  .CHNL_TX_ACK(CHNL_TX_ACK[i]),
-                  .CHNL_TX_LAST(CHNL_TX_LAST[i]), 
-                  .CHNL_TX_LEN(CHNL_TX_LEN[(32*i) +:32]), 
-                  .CHNL_TX_OFF(CHNL_TX_OFF[(31*i) +:31]), 
-                  .CHNL_TX_DATA(CHNL_TX_DATA[(C_PCI_DATA_WIDTH*i) +:C_PCI_DATA_WIDTH]), 
-                  .CHNL_TX_DATA_VALID(CHNL_TX_DATA_VALID[i]), 
-                  .CHNL_TX_DATA_REN(CHNL_TX_DATA_REN[i])
+                  // channel read
+                  .CHNL_RX_CLK                    (CHNL_RX_CLK[i]),                // i
+                  .CHNL_RX                        (CHNL_RX[i]),                    // i
+                  .CHNL_RX_DATA_REN               (CHNL_RX_DATA_REN[i]),           // i
+                  .CHNL_RX_ACK                    (CHNL_RX_ACK[i]),                // o
+                  .CHNL_RX_LAST                   (CHNL_RX_LAST[i]),               // o
+                  .CHNL_RX_LEN                    (CHNL_RX_LEN[(32*i) +:32]),      // o
+                  .CHNL_RX_OFF                    (CHNL_RX_OFF[(31*i) +:31]),      // o
+                  .CHNL_RX_DATA                   (CHNL_RX_DATA[(C_PCI_DATA_WIDTH*i) +:C_PCI_DATA_WIDTH]),// o
+                  .CHNL_RX_DATA_VALID             (CHNL_RX_DATA_VALID[i]),         // o
+                  // channel write
+                  .CHNL_TX_CLK                    (CHNL_TX_CLK[i]),                // i
+                  .CHNL_TX                        (CHNL_TX[i]),                    // i
+                  .CHNL_TX_LAST                   (CHNL_TX_LAST[i]),               // i
+                  .CHNL_TX_LEN                    (CHNL_TX_LEN[(32*i) +:32]),      // i
+                  .CHNL_TX_OFF                    (CHNL_TX_OFF[(31*i) +:31]),      // i
+                  .CHNL_TX_DATA                   (CHNL_TX_DATA[(C_PCI_DATA_WIDTH*i) +:C_PCI_DATA_WIDTH]), // i
+                  .CHNL_TX_DATA_VALID             (CHNL_TX_DATA_VALID[i]),         // i
+                  .CHNL_TX_ACK                    (CHNL_TX_ACK[i]),                // o
+                  .CHNL_TX_DATA_REN               (CHNL_TX_DATA_REN[i])            // o
                   );
 
         end

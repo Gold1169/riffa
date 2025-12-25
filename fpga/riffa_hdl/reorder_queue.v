@@ -77,7 +77,7 @@ module reorder_queue
     (
      input                                            CLK, // Clock
      input                                            RST, // Synchronous reset
-     input                                            VALID, // Valid input packet
+     input                                            VALID, // Input packet Valid
      input [C_PCI_DATA_WIDTH-1:0]                     DATA, // Input packet payload
      input [(C_PCI_DATA_WIDTH/32)-1:0]                DATA_EN, // Input packet payload data enable
      input                                            DATA_START_FLAG, // Input packet payload
@@ -102,7 +102,7 @@ module reorder_queue
      output [C_NUM_CHNL-1:0]                          SG_RX_ERR, // Scatter gather for RX data completed with error
      output [(C_NUM_CHNL*C_PCI_DATA_COUNT_WIDTH)-1:0] SG_TX_DATA_EN, // Scatter gather for TX data enable
      output [C_NUM_CHNL-1:0]                          SG_TX_DONE, // Scatter gather for TX data complete
-     output [C_NUM_CHNL-1:0]                          SG_TX_ERR                             // Scatter gather for TX data completed with error
+     output [C_NUM_CHNL-1:0]                          SG_TX_ERR // Scatter gather for TX data completed with error
      );
 
 
@@ -161,143 +161,136 @@ module reorder_queue
 
     // Update tag/slot/bucket status.
     always @ (posedge CLK) begin
-        if (RST) begin
-            rUsing <= #1 0;
-            rFinished <= #1 0;
-        end
-        else begin
-            rUsing <= #1 (rUsing | rUse) & ~wClear;
-            rFinished <= #1 (rFinished | wFinish) & ~wClear;
-        end
+      if (RST) begin
+         rUsing <= #1 0;
+         rFinished <= #1 0;
+      end
+      else begin
+         rUsing <= #1 (rUsing | rUse) & ~wClear;
+         rFinished <= #1 (rFinished | wFinish) & ~wClear;
+      end
     end
 
 
-    genvar r;
-    generate
-        for (r = 0; r < C_PCI_DATA_WORD; r = r + 1) begin : rams
-            // RAMs for packet reordering.
-            (* RAM_STYLE="BLOCK" *)
-            ram_1clk_1w_1r 
-                 #(.C_RAM_WIDTH(32), 
-                   .C_RAM_DEPTH(C_NUM_TAGS*C_DW_PER_TAG/C_PCI_DATA_WORD)
-                   ) 
-            ram 
-                 (
-                  .CLK(CLK),
-                  .ADDRA(wWrDataAddr[C_DATA_ADDR_WIDTH*r +:C_DATA_ADDR_WIDTH]),
-                  .WEA(wWrDataEn[r]),
-                  .DINA(wWrData[32*r +:32]),
-                  .ADDRB(wRdDataAddr),
-                  .DOUTB(wRdData[32*r +:32])
-                  );
-        end
-    endgenerate
-
-
-    // RAM for bucket done, err, final DW count
-    (* RAM_STYLE="DISTRIBUTED" *)
-    ram_1clk_1w_1r 
-        #(.C_RAM_WIDTH(1 + 1 + 1 + 1 + C_TAG_DW_COUNT_WIDTH), 
-          .C_RAM_DEPTH(C_NUM_TAGS)) 
-    pktRam 
-        (
+genvar r;
+generate
+   for (r = 0; r < C_PCI_DATA_WORD; r = r + 1) begin : rams
+      // RAMs for packet reordering.
+      (* RAM_STYLE="BLOCK" *)
+      ram_1clk_1w_1r #( .C_RAM_WIDTH(32), 
+                        .C_RAM_DEPTH(C_NUM_TAGS*C_DW_PER_TAG/C_PCI_DATA_WORD)) 
+      pktRam (
          .CLK(CLK),
-         .ADDRA(wWrPktTag),
-         .WEA((wWrPktDone | wWrPktErr) & wWrPktValid),
-         .DINA({wWrPktDone, wWrPktErr, wWrPktWordsLTE2, wWrPktWordsLTE1, wWrPktWords}),
-         .ADDRB(wRdPktTag),
-         .DOUTB(wRdPktInfo)
-         );
+         .ADDRA(wWrDataAddr[C_DATA_ADDR_WIDTH*r +:C_DATA_ADDR_WIDTH]),
+         .WEA(wWrDataEn[r]),
+         .DINA(wWrData[32*r +:32]),
+         .ADDRB(wRdDataAddr),
+         .DOUTB(wRdData[32*r +:32])
+      );
+   end
+endgenerate
 
 
-    // RAM for tag map
-    (* RAM_STYLE="DISTRIBUTED" *)
-    ram_1clk_1w_1r 
-        #(.C_RAM_WIDTH(6), 
-          .C_RAM_DEPTH(C_NUM_TAGS)) 
-    mapRam 
-        (
-         .CLK(CLK),
-         .ADDRA(rPos),
-         .WEA(INT_TAG_VALID & EXT_TAG_VALID),
-         .DINA(INT_TAG),
-         .ADDRB(wRdPktTag),
-         .DOUTB(wRdTagMap)
-         );
+   // RAM for bucket done, err, final DW count
+   (* RAM_STYLE="DISTRIBUTED" *)
+   ram_1clk_1w_1r #( .C_RAM_WIDTH(1 + 1 + 1 + 1 + C_TAG_DW_COUNT_WIDTH), 
+                     .C_RAM_DEPTH(C_NUM_TAGS)) 
+   pktInfoRam (
+      .CLK(CLK),
+      .ADDRA(wWrPktTag),
+      .WEA((wWrPktDone | wWrPktErr) & wWrPktValid),
+      .DINA({wWrPktDone, wWrPktErr, wWrPktWordsLTE2, wWrPktWordsLTE1, wWrPktWords}),
+      .ADDRB(wRdPktTag),
+      .DOUTB(wRdPktInfo)
+   );
 
 
-    // Demux input data into the correct slot/bucket.
-    reorder_queue_input 
-        #(
-          .C_PCI_DATA_WIDTH(C_PCI_DATA_WIDTH),
-          .C_TAG_WIDTH(C_TAG_WIDTH),
-          .C_TAG_DW_COUNT_WIDTH(C_TAG_DW_COUNT_WIDTH),
-          .C_DATA_ADDR_STRIDE_WIDTH(C_DATA_ADDR_STRIDE_WIDTH),
-          .C_DATA_ADDR_WIDTH(C_DATA_ADDR_WIDTH)
-          ) 
-    data_input 
-        (
-         .CLK(CLK),
-         .RST(RST),
-         .VALID(VALID),
-         .DATA_START_FLAG               (DATA_START_FLAG),
-         .DATA_START_OFFSET             (DATA_START_OFFSET[clog2s(C_PCI_DATA_WIDTH/32)-1:0]),
-         .DATA_END_FLAG                 (DATA_END_FLAG),
-         .DATA_END_OFFSET               (DATA_END_OFFSET[clog2s(C_PCI_DATA_WIDTH/32)-1:0]),
-         .DATA                          (DATA),
-         .DATA_EN                       (DATA_EN),
-         .DONE(DONE),
-         .ERR(ERR),
-         .TAG(TAG),
-         .TAG_FINISH(wFinish),
-         .TAG_CLEAR(wClear),
-         .STORED_DATA_ADDR(wWrDataAddr),
-         .STORED_DATA(wWrData),
-         .STORED_DATA_EN(wWrDataEn),
-         .PKT_VALID(wWrPktValid),
-         .PKT_TAG(wWrPktTag),
-         .PKT_WORDS(wWrPktWords),
-         .PKT_WORDS_LTE1(wWrPktWordsLTE1),
-         .PKT_WORDS_LTE2(wWrPktWordsLTE2),
-         .PKT_DONE(wWrPktDone),
-         .PKT_ERR(wWrPktErr)
-         );
+   // RAM for tag map
+   (* RAM_STYLE="DISTRIBUTED" *)
+   ram_1clk_1w_1r #(.C_RAM_WIDTH(6), 
+                    .C_RAM_DEPTH(C_NUM_TAGS)) 
+   mapRam (
+      .CLK(CLK),
+      .ADDRA(rPos),
+      .WEA(INT_TAG_VALID & EXT_TAG_VALID),
+      .DINA(INT_TAG),
+      .ADDRB(wRdPktTag),
+      .DOUTB(wRdTagMap)
+   );
 
 
-    // Output packets in increasing tag order.
-    reorder_queue_output 
-        #(
-          .C_PCI_DATA_WIDTH(C_PCI_DATA_WIDTH),
-          .C_NUM_CHNL(C_NUM_CHNL),
-          .C_TAG_WIDTH(C_TAG_WIDTH),
-          .C_TAG_DW_COUNT_WIDTH(C_TAG_DW_COUNT_WIDTH),
-          .C_DATA_ADDR_STRIDE_WIDTH(C_DATA_ADDR_STRIDE_WIDTH),
-          .C_DATA_ADDR_WIDTH(C_DATA_ADDR_WIDTH)
-          ) 
-    data_output 
-        (
-         .CLK(CLK),
-         .RST(RST),
-         .DATA_ADDR(wRdDataAddr),
-         .DATA(wRdData),
-         .TAG_FINISHED(rFinished),
-         .TAG_CLEAR(wClear),
-         .TAG(wRdPktTag),
-         .TAG_MAPPED(wRdTagMap),
-         .PKT_WORDS(wRdPktInfo[0 +:C_TAG_DW_COUNT_WIDTH]),
-         .PKT_WORDS_LTE1(wRdPktInfo[C_TAG_DW_COUNT_WIDTH]),
-         .PKT_WORDS_LTE2(wRdPktInfo[C_TAG_DW_COUNT_WIDTH+1]),
-         .PKT_ERR(wRdPktInfo[C_TAG_DW_COUNT_WIDTH+2]),
-         .PKT_DONE(wRdPktInfo[C_TAG_DW_COUNT_WIDTH+3]),
-         .ENG_DATA(ENG_DATA),
-         .MAIN_DATA_EN(MAIN_DATA_EN),
-         .MAIN_DONE(MAIN_DONE),
-         .MAIN_ERR(MAIN_ERR),
-         .SG_RX_DATA_EN(SG_RX_DATA_EN),
-         .SG_RX_DONE(SG_RX_DONE),
-         .SG_RX_ERR(SG_RX_ERR),
-         .SG_TX_DATA_EN(SG_TX_DATA_EN),
-         .SG_TX_DONE(SG_TX_DONE),
-         .SG_TX_ERR(SG_TX_ERR)
-         );
+   // Demux input data into the correct slot/bucket.
+   reorder_queue_input #(
+      .C_PCI_DATA_WIDTH(C_PCI_DATA_WIDTH),
+      .C_TAG_WIDTH(C_TAG_WIDTH),
+      .C_TAG_DW_COUNT_WIDTH(C_TAG_DW_COUNT_WIDTH),
+      .C_DATA_ADDR_STRIDE_WIDTH(C_DATA_ADDR_STRIDE_WIDTH),
+      .C_DATA_ADDR_WIDTH(C_DATA_ADDR_WIDTH)) 
+   data_input (
+      // input
+      .CLK                           (CLK),
+      .RST                           (RST),
+
+      .VALID                         (VALID),
+      .DATA_START_FLAG               (DATA_START_FLAG),
+      .DATA_START_OFFSET             (DATA_START_OFFSET[clog2s(C_PCI_DATA_WIDTH/32)-1:0]),
+      .DATA_END_FLAG                 (DATA_END_FLAG),
+      .DATA_END_OFFSET               (DATA_END_OFFSET[clog2s(C_PCI_DATA_WIDTH/32)-1:0]),
+      .DATA                          (DATA),
+      .DATA_EN                       (DATA_EN),
+      .DONE                          (DONE),
+      .ERR                           (ERR),
+      .TAG                           (TAG),
+
+      .TAG_CLEAR                     (wClear),
+      // output
+      .TAG_FINISH                    (wFinish),
+
+      .STORED_DATA_ADDR              (wWrDataAddr),
+      .STORED_DATA                   (wWrData),
+      .STORED_DATA_EN                (wWrDataEn),
+      .PKT_VALID                     (wWrPktValid),
+      .PKT_TAG                       (wWrPktTag),
+      .PKT_WORDS                     (wWrPktWords),
+      .PKT_WORDS_LTE1                (wWrPktWordsLTE1),
+      .PKT_WORDS_LTE2                (wWrPktWordsLTE2),
+      .PKT_DONE                      (wWrPktDone),
+      .PKT_ERR                       (wWrPktErr)
+   );
+
+
+   // Output packets in increasing tag order.
+   reorder_queue_output #(
+      .C_PCI_DATA_WIDTH         (C_PCI_DATA_WIDTH),
+      .C_NUM_CHNL               (C_NUM_CHNL),
+      .C_TAG_WIDTH              (C_TAG_WIDTH),
+      .C_TAG_DW_COUNT_WIDTH     (C_TAG_DW_COUNT_WIDTH),
+      .C_DATA_ADDR_STRIDE_WIDTH (C_DATA_ADDR_STRIDE_WIDTH),
+      .C_DATA_ADDR_WIDTH        (C_DATA_ADDR_WIDTH)
+      ) 
+   data_output (
+      .CLK                             (CLK),
+      .RST                             (RST),
+      .DATA_ADDR                       (wRdDataAddr),
+      .DATA                            (wRdData),
+      .TAG_FINISHED                    (rFinished),
+      .TAG_CLEAR                       (wClear),
+      .TAG                             (wRdPktTag),
+      .TAG_MAPPED                      (wRdTagMap),
+      .PKT_WORDS                       (wRdPktInfo[0 +:C_TAG_DW_COUNT_WIDTH]),
+      .PKT_WORDS_LTE1                  (wRdPktInfo[C_TAG_DW_COUNT_WIDTH]),
+      .PKT_WORDS_LTE2                  (wRdPktInfo[C_TAG_DW_COUNT_WIDTH+1]),
+      .PKT_ERR                         (wRdPktInfo[C_TAG_DW_COUNT_WIDTH+2]),
+      .PKT_DONE                        (wRdPktInfo[C_TAG_DW_COUNT_WIDTH+3]),
+      .ENG_DATA                        (ENG_DATA),
+      .MAIN_DATA_EN                    (MAIN_DATA_EN),
+      .MAIN_DONE                       (MAIN_DONE),
+      .MAIN_ERR                        (MAIN_ERR),
+      .SG_RX_DATA_EN                   (SG_RX_DATA_EN),
+      .SG_RX_DONE                      (SG_RX_DONE),
+      .SG_RX_ERR                       (SG_RX_ERR),
+      .SG_TX_DATA_EN                   (SG_TX_DATA_EN),
+      .SG_TX_DONE                      (SG_TX_DONE),
+      .SG_TX_ERR                       (SG_TX_ERR)
+   );
 endmodule
