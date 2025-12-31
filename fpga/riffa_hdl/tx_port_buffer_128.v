@@ -33,15 +33,15 @@
 // DAMAGE.
 // ----------------------------------------------------------------------
 //----------------------------------------------------------------------------
-// Filename:         tx_port_buffer_128.v
-// Version:            1.00.a
-// Verilog Standard:   Verilog-2001
+// Filename:            tx_port_buffer_128.v
+// Version:             1.00.a
+// Verilog Standard:    Verilog-2001
 // Description:         Wraps a FIFO for saving channel data and provides a 
 // registered read output. Retains unread words from reads that are a length 
 // which is not a multiple of the data bus width (C_FIFO_DATA_WIDTH). Data is
 // available 5 cycles after RD_EN is asserted (not 1, like a traditional FIFO).
-// Author:            Matt Jacobsen
-// History:            @mattj: Version 2.0
+// Author:              Matt Jacobsen
+// History:             @mattj: Version 2.0
 //-----------------------------------------------------------------------------
 
 `timescale 1ns/1ns
@@ -57,19 +57,19 @@ module tx_port_buffer_128 #(
    parameter C_LEN_LAST_HIST = 1
 )
 (
-   input RST,
-   input CLK,
+   input          RST,
+   input          CLK,
 
-   input LEN_VALID,                     // Transfer length is valid
-   input [1:0] LEN_LSB,                  // LSBs of transfer length
-   input LEN_LAST,                        // Last transfer in transaction
+   input          LEN_VALID,  // Transfer length is valid
+   input [1:0]    LEN_LSB,    // LSBs of transfer length
+   input          LEN_LAST,   // Last transfer in transaction
 
-   input [C_FIFO_DATA_WIDTH-1:0] WR_DATA,      // Input data
-   input WR_EN,                        // Input data write enable
-   output [C_FIFO_DEPTH_WIDTH-1:0] WR_COUNT,   // Input data write count
+   input                            WR_EN,    // Input data write enable
+   input [C_FIFO_DATA_WIDTH-1:0]    WR_DATA,  // Input data
+   output [C_FIFO_DEPTH_WIDTH-1:0]  WR_COUNT, // Input data write count
 
-   output [C_FIFO_DATA_WIDTH-1:0] RD_DATA,      // Output data
-   input RD_EN                           // Output data read enable
+   input                            RD_EN,    // Output data read enable
+   output [C_FIFO_DATA_WIDTH-1:0]   RD_DATA   // Output data
 );
 
 `include "functions.vh"
@@ -83,14 +83,14 @@ reg                           rLenValid=0, _rLenValid=0;
 
 reg                           rRen=0, _rRen=0;   
 reg    [2:0]                  rCount=0, _rCount=0;
-reg    [(C_COUNT_HIST*3)-1:0]      rCountHist={C_COUNT_HIST{3'd0}}, _rCountHist={C_COUNT_HIST{3'd0}};
-reg    [C_LEN_LAST_HIST-1:0]      rLenLastHist={C_LEN_LAST_HIST{1'd0}}, _rLenLastHist={C_LEN_LAST_HIST{1'd0}};
-reg    [C_RD_EN_HIST-1:0]         rRdEnHist={C_RD_EN_HIST{1'd0}}, _rRdEnHist={C_RD_EN_HIST{1'd0}};
-reg                         rFifoRdEn=0, _rFifoRdEn=0;
+reg    [(C_COUNT_HIST*3)-1:0] rCountHist={C_COUNT_HIST{3'd0}}, _rCountHist={C_COUNT_HIST{3'd0}};
+reg    [C_LEN_LAST_HIST-1:0]  rLenLastHist={C_LEN_LAST_HIST{1'd0}}, _rLenLastHist={C_LEN_LAST_HIST{1'd0}};
+reg    [C_RD_EN_HIST-1:0]     rRdEnHist={C_RD_EN_HIST{1'd0}}, _rRdEnHist={C_RD_EN_HIST{1'd0}};
+reg                           rFifoRdEn=0, _rFifoRdEn=0;
 reg    [C_FIFO_RD_EN_HIST-1:0]      rFifoRdEnHist={C_FIFO_RD_EN_HIST{1'd0}}, _rFifoRdEnHist={C_FIFO_RD_EN_HIST{1'd0}};
-reg    [(C_CONSUME_HIST*3)-1:0]   rConsumedHist={C_CONSUME_HIST{3'd0}}, _rConsumedHist={C_CONSUME_HIST{3'd0}};
-reg      [C_FIFO_DATA_WIDTH-1:0]      rFifoData={C_FIFO_DATA_WIDTH{1'd0}}, _rFifoData={C_FIFO_DATA_WIDTH{1'd0}};
-reg      [223:0]                  rData=224'd0, _rData=224'd0;
+reg    [(C_CONSUME_HIST*3)-1:0]     rConsumedHist={C_CONSUME_HIST{3'd0}}, _rConsumedHist={C_CONSUME_HIST{3'd0}};
+reg    [C_FIFO_DATA_WIDTH-1:0]      rFifoData={C_FIFO_DATA_WIDTH{1'd0}}, _rFifoData={C_FIFO_DATA_WIDTH{1'd0}};
+reg    [223:0]                      rData=224'd0, _rData=224'd0;
 
 wire   [C_FIFO_DATA_WIDTH-1:0]      wFifoData;
 
@@ -111,16 +111,19 @@ end
 
 // FIFO for storing data from the channel.
 (* RAM_STYLE="BLOCK" *)
-sync_fifo #(.C_WIDTH(C_FIFO_DATA_WIDTH), .C_DEPTH(C_FIFO_DEPTH), .C_PROVIDE_COUNT(1)) fifo (
-   .CLK(CLK),
-   .RST(RST),
-   .WR_EN(WR_EN),
-   .WR_DATA(WR_DATA),
-   .FULL(),
-   .COUNT(WR_COUNT),
-   .RD_EN(rFifoRdEn),
-   .RD_DATA(wFifoData),
-   .EMPTY()
+sync_fifo #(.C_WIDTH(C_FIFO_DATA_WIDTH), 
+            .C_DEPTH(C_FIFO_DEPTH), 
+            .C_PROVIDE_COUNT(1)) 
+fifo (
+   .CLK        (CLK),
+   .RST        (RST),
+   .WR_EN      (WR_EN),
+   .WR_DATA    (WR_DATA),
+   .FULL       (),
+   .COUNT      (WR_COUNT),
+   .RD_EN      (rFifoRdEn),
+   .RD_DATA    (wFifoData),
+   .EMPTY      ()
 );
 
 
@@ -150,7 +153,7 @@ end
 always @ (*) begin
    // Keep track of words in our buffer. Subtract 4 when we reach 4 on RD_EN.
    // Add wLenLSB when we finish a sequence of RD_EN that read 1, 2, or 3 words.
-    // rCount + remainder
+   // rCount + remainder
    _rCount = rCount + ({2{(wAfterEnd & !wLenLast)}} & wLenLSB) - ({(rRen & rCount[2]), 2'd0}) - ({3{(wAfterEnd & wLenLast)}} & rCount);
    _rCountHist = ((rCountHist<<3) | rCount);
 
@@ -190,15 +193,17 @@ always @ (posedge CLK) begin
 end
 
 always @ (*) begin
-    _rRdPtr = (wAfterEnd ? rRdPtr + 1'd1 : rRdPtr);
-    _rWrPtr = (rLenValid ? rWrPtr + 1'd1 : rWrPtr);
-    _rLenLSB0 = rLenLSB0;
-    _rLenLSB1 = rLenLSB1;
-    if(rLenValid)
-        {_rLenLSB1[rWrPtr], _rLenLSB0[rWrPtr]} = (~LEN_LSB + 1);
-    _rLenLast = rLenLast;
-    if(rLenValid)
-        _rLenLast[rWrPtr] = LEN_LAST;
+   _rRdPtr = (wAfterEnd ? rRdPtr + 1'd1 : rRdPtr);
+   _rWrPtr = (rLenValid ? rWrPtr + 1'd1 : rWrPtr);
+   _rLenLSB0 = rLenLSB0;
+   _rLenLSB1 = rLenLSB1;
+   if(rLenValid)
+     {_rLenLSB1[rWrPtr], _rLenLSB0[rWrPtr]} = (~LEN_LSB + 1);
+
+   _rLenLast = rLenLast;
+
+   if(rLenValid)
+      _rLenLast[rWrPtr] = LEN_LAST;
 end
 
 endmodule

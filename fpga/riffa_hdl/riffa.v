@@ -500,6 +500,13 @@ module riffa
          .CHNL_TX_DONE_READY            (wChnlTxDoneReady),
          .CHNL_RX_DONE_READY            (wChnlRxDoneReady),
          .CHNL_NAME_READY               (wChnlNameReady), // TODO: Could do this on a per-channel basis
+         // Read Data
+         .CORE_SETTINGS                 (wCoreSettings),
+         .CHNL_TX_REQLEN                (wChnlTxReqLen),
+         .CHNL_TX_OFFLAST               (wChnlTxOfflast),
+         .CHNL_TX_DONELEN               (wChnlTxDoneLen),
+         .CHNL_RX_DONELEN               (wChnlRxDoneLen),
+         .INTR_VECTOR                   (wIntrVector),
          // TXC Engine Interface
          .TXC_DATA_READY                (_wTxcDataReady),
          .TXC_DATA_VALID                (_wTxcDataValid),
@@ -522,13 +529,6 @@ module riffa
          .TXC_META_ATTR                 (_wTxcMetaAttr[`SIG_ATTR_W-1:0]),
          .TXC_META_EP                   (_wTxcMetaEp),
          // Inputs
-         // Read Data
-         .CORE_SETTINGS                 (wCoreSettings),
-         .CHNL_TX_REQLEN                (wChnlTxReqLen),
-         .CHNL_TX_OFFLAST               (wChnlTxOfflast),
-         .CHNL_TX_DONELEN               (wChnlTxDoneLen),
-         .CHNL_RX_DONELEN               (wChnlRxDoneLen),
-         .INTR_VECTOR                   (wIntrVector),
          .RST_IN                        (RST_OUT),
          /*AUTOINST*/
          // Inputs
@@ -603,9 +603,6 @@ module riffa
     tx_mux_inst
         (
          // Outputs
-         .WR_DATA_REN                   (wTxEngWrDataRen[C_NUM_CHNL-1:0]), // read need-write-data from channel 
-         .WR_ACK                        (wTxEngWrAck[C_NUM_CHNL-1:0]),
-         .RD_ACK                        (wTxEngRdAck[C_NUM_CHNL-1:0]),
          .INT_TAG                       (wInternalTag[5:0]),
          .INT_TAG_VALID                 (wInternalTagValid),
          .TX_ENG_RD_REQ_SENT            (wTxEngRdReqSent),
@@ -613,12 +610,15 @@ module riffa
          // wr req from channels
          .RST_IN                        (RST_OUT),
 
+         .WR_ACK                        (wTxEngWrAck[C_NUM_CHNL-1:0]),
+         .WR_SENT                       (wTxEngWrSent[C_NUM_CHNL-1:0]),
          .WR_REQ                        (wTxEngWrReq[C_NUM_CHNL-1:0]),
          .WR_ADDR                       (wTxEngWrAddr[(C_NUM_CHNL*`SIG_ADDR_W)-1:0]),
          .WR_LEN                        (wTxEngWrLen[(C_NUM_CHNL*`SIG_LEN_W)-1:0]),
          .WR_DATA                       (wTxEngWrData[(C_NUM_CHNL*C_PCI_DATA_WIDTH)-1:0]),
-         .WR_SENT                       (wTxEngWrSent[C_NUM_CHNL-1:0]),
+         .WR_DATA_REN                   (wTxEngWrDataRen[C_NUM_CHNL-1:0]), // read need-write-data from channel 
           // rd req from channels
+         .RD_ACK                        (wTxEngRdAck[C_NUM_CHNL-1:0]),
          .RD_REQ                        (wTxEngRdReq[C_NUM_CHNL-1:0]),
          .RD_SG_CHNL                    (wTxEngRdSgChnl[(C_NUM_CHNL*2)-1:0]),
          .RD_ADDR                       (wTxEngRdAddr[(C_NUM_CHNL*`SIG_ADDR_W)-1:0]),
@@ -662,7 +662,6 @@ module riffa
                   .CONFIG_MAX_READ_REQUEST_SIZE   (CONFIG_MAX_READ_REQUEST_SIZE), 
                   .CONFIG_MAX_PAYLOAD_SIZE        (CONFIG_MAX_PAYLOAD_SIZE), 
 
-                
                   // input interface
                   .PIO_DATA                       (wChnlReqData), // receive sg/rx info data
 

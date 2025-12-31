@@ -375,15 +375,16 @@ rx_port_requester_mux requesterMux (
 // we have it ready whenever the next buffer is needed.
 sg_list_reader_128 #(.C_DATA_WIDTH(C_DATA_WIDTH)) sgListReader (
    .CLK            (CLK),
-   .RST            (rRst | wSgRst),
-   .BUF_DATA       (wSgRxData),
-   .BUF_DATA_EMPTY (wSgRxDataEmpty),
-   .BUF_DATA_REN   (wSgRxDataRen),
-   .VALID          (wSgElemRdy),
-   .EMPTY          (),
-   .REN            (wSgElemRen),
-   .ADDR           (wSgElemAddr),
-   .LEN            (wSgElemLen)
+   .RST            (rRst | wSgRst),    // i
+   .BUF_DATA       (wSgRxData),        // i
+   .BUF_DATA_EMPTY (wSgRxDataEmpty),   // i
+   .BUF_DATA_REN   (wSgRxDataRen),     // o
+
+   .REN            (wSgElemRen),       // i
+   .VALID          (wSgElemRdy),       // o
+   .EMPTY          (),                 // o
+   .ADDR           (wSgElemAddr),      // o
+   .LEN            (wSgElemLen)        // o
 ); 
 
 

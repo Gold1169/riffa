@@ -44,13 +44,12 @@
 `timescale 1ns/1ns
 module channel_128 #(
    parameter C_DATA_WIDTH = 9'd128,
-   parameter C_MAX_READ_REQ = 2,               // Max read: 000=128B, 001=256B, 010=512B, 011=1024B, 100=2048B, 101=4096B
+   parameter C_MAX_READ_REQ = 2, // Max read: 000=128B, 001=256B, 010=512B, 011=1024B, 100=2048B, 101=4096B
    // Local parameters
    parameter C_RX_FIFO_DEPTH = 1024,
    parameter C_TX_FIFO_DEPTH = 512,
    parameter C_SG_FIFO_DEPTH = 1024,
-   parameter C_DATA_WORD_WIDTH = clog2((C_DATA_WIDTH/32)+1)
-)
+   parameter C_DATA_WORD_WIDTH = clog2((C_DATA_WIDTH/32)+1) )
 (
    input                    CLK,
    input                    RST,
@@ -147,8 +146,8 @@ rx_port_128 #(
    .C_DATA_WIDTH(C_DATA_WIDTH), 
    .C_MAIN_FIFO_DEPTH(C_RX_FIFO_DEPTH), 
    .C_SG_FIFO_DEPTH(C_SG_FIFO_DEPTH),
-   .C_MAX_READ_REQ(C_MAX_READ_REQ)
-) rxPort (
+   .C_MAX_READ_REQ(C_MAX_READ_REQ) ) 
+rxPort (
    .RST                             (RST), 
    .CLK                             (CLK), 
    .CONFIG_MAX_READ_REQUEST_SIZE    (CONFIG_MAX_READ_REQUEST_SIZE), 
@@ -214,8 +213,8 @@ rx_port_128 #(
 // Sending port (data from the channel)
 tx_port_128 #(
    .C_DATA_WIDTH                 (C_DATA_WIDTH), 
-   .C_FIFO_DEPTH                 (C_TX_FIFO_DEPTH)
-) txPort (
+   .C_FIFO_DEPTH                 (C_TX_FIFO_DEPTH) )
+txPort (
    .CLK                          (CLK), 
    .RST                          (RST), 
    .CONFIG_MAX_PAYLOAD_SIZE      (CONFIG_MAX_PAYLOAD_SIZE), 

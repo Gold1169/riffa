@@ -58,9 +58,9 @@ module sg_list_reader_128 #(
    input                      BUF_DATA_EMPTY,  // Scatter gather buffer data empty
    output                     BUF_DATA_REN,    // Scatter gather buffer data read enable
 
+   input                      REN,             // Scatter gather element data read enable
    output                     VALID,           // Scatter gather element data is valid
    output                     EMPTY,           // Scatter gather elements empty
-   input                      REN,             // Scatter gather element data read enable
    output [63:0]              ADDR,            // Scatter gather element address
    output [31:0]              LEN              // Scatter gather element length (in words)
 );

@@ -222,14 +222,14 @@ module engine_layer
             assign S_AXIS_RQ_TUSER = 0;
 
             /* verilator lint_on WIDTH */
-	        rx_engine_classic
-	            #(/*AUTOINSTPARAM*/
+           rx_engine_classic
+               #(/*AUTOINSTPARAM*/
                   // Parameters
                   .C_VENDOR             (C_VENDOR),
                   .C_PCI_DATA_WIDTH     (C_PCI_DATA_WIDTH),
                   .C_LOG_NUM_TAGS       (C_LOG_NUM_TAGS))
-	        rx_engine_classic_inst
-	            (/*AUTOINST*/
+           rx_engine_classic_inst
+               (/*AUTOINST*/
                  // Outputs
                  .DONE_RXR_RST          (DONE_RXR_RST),
                  .DONE_RXC_RST          (DONE_RXC_RST),
@@ -280,16 +280,16 @@ module engine_layer
                  .RX_TLP_END_OFFSET     (RX_TLP_END_OFFSET[`SIG_OFFSET_W-1:0]),
                  .RX_TLP_BAR_DECODE     (RX_TLP_BAR_DECODE[`SIG_BARDECODE_W-1:0]));
 
-	        tx_engine_classic
-	            #(/*AUTOINSTPARAM*/
+           tx_engine_classic
+               #(/*AUTOINSTPARAM*/
                   // Parameters
                   .C_PCI_DATA_WIDTH     (C_PCI_DATA_WIDTH),
                   .C_PIPELINE_INPUT     (C_PIPELINE_INPUT),
                   .C_PIPELINE_OUTPUT    (C_PIPELINE_OUTPUT),
                   .C_MAX_PAYLOAD_DWORDS (C_MAX_PAYLOAD_DWORDS),
                   .C_VENDOR             (C_VENDOR))
-	        tx_engine_classic_inst
-	            (/*AUTOINST*/
+           tx_engine_classic_inst
+               (/*AUTOINST*/
                  // Outputs
                  .DONE_TXC_RST          (DONE_TXC_RST),
                  .DONE_TXR_RST          (DONE_TXR_RST),
@@ -355,12 +355,12 @@ module engine_layer
             assign TX_TLP_END_FLAG = 0;
             assign TX_TLP_END_OFFSET = 0;
             assign RX_TLP_READY = 0;
-	        rx_engine_ultrascale
-	            #(/*AUTOINSTPARAM*/
+           rx_engine_ultrascale
+               #(/*AUTOINSTPARAM*/
                   // Parameters
                   .C_PCI_DATA_WIDTH     (C_PCI_DATA_WIDTH))
-	        rx_engine_ultrascale_inst
-	            (/*AUTOINST*/
+           rx_engine_ultrascale_inst
+               (/*AUTOINST*/
                  // Outputs
                  .DONE_RXR_RST          (DONE_RXR_RST),
                  .DONE_RXC_RST          (DONE_RXC_RST),
@@ -415,15 +415,15 @@ module engine_layer
                  .M_AXIS_RC_TKEEP       (M_AXIS_RC_TKEEP[(C_PCI_DATA_WIDTH/32)-1:0]),
                  .M_AXIS_RC_TUSER       (M_AXIS_RC_TUSER[`SIG_RC_TUSER_W-1:0]));
 
-	        tx_engine_ultrascale
-	            #(/*AUTOINSTPARAM*/
+           tx_engine_ultrascale
+               #(/*AUTOINSTPARAM*/
                   // Parameters
                   .C_PCI_DATA_WIDTH     (C_PCI_DATA_WIDTH),
                   .C_PIPELINE_INPUT     (C_PIPELINE_INPUT),
                   .C_PIPELINE_OUTPUT    (C_PIPELINE_OUTPUT),
                   .C_MAX_PAYLOAD_DWORDS (C_MAX_PAYLOAD_DWORDS))
-	        tx_engine_ultrascale_inst
-	            (/*AUTOINST*/
+           tx_engine_ultrascale_inst
+               (/*AUTOINST*/
                  // Outputs
                  .DONE_TXC_RST          (DONE_TXC_RST),
                  .DONE_TXR_RST          (DONE_TXR_RST),

@@ -257,7 +257,7 @@ module registers
             
             assign __wRdMemory[{channel[27:0] , `ADDR_TX_LEN}] = CHNL_TX_REQLEN[32*channel +: 32];
             assign __wRdMemory[{channel[27:0] , `ADDR_TX_OFFLAST}] = CHNL_TX_OFFLAST[32*channel +: 32];
-            assign __wRdMemory[{channel[27:0] , `ADDR_RX_LEN_XFERD}] = CHNL_RX_DONELEN[32*channel +: 32];            
+            assign __wRdMemory[{channel[27:0] , `ADDR_RX_LEN_XFERD}] = CHNL_RX_DONELEN[32*channel +: 32];
             assign __wRdMemory[{channel[27:0] , `ADDR_TX_LEN_XFERD}] = CHNL_TX_DONELEN[32*channel +: 32];
         end
         for(addr = 0 ; addr < C_ADDR_RANGE ; addr = addr + 1) begin : gen_wRdMemory
