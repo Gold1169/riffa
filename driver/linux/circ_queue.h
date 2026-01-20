@@ -49,10 +49,10 @@
 
 /* Struct for the circular queue. */
 struct circ_queue {
-	atomic_t writeIndex;
-	atomic_t readIndex;
-	unsigned int ** vals;
-	unsigned int len;
+   atomic_t writeIndex;
+   atomic_t readIndex;
+   unsigned int ** vals;
+   unsigned int len;
 };
 typedef struct circ_queue circ_queue;
 

@@ -191,7 +191,7 @@ buffer (
 
    .WR_EN            (wBufWen),     // i
    .WR_DATA          (wBufData),    // i
-   .WR_COUNT         (wBufCount)    // o
+   .WR_COUNT         (wBufCount),   // o
 
    .RD_EN            (TX_DATA_REN), // i
    .RD_DATA          (TX_DATA)      // o

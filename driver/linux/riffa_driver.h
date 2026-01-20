@@ -64,59 +64,59 @@
 #define VENDOR_ID1 0x1172
 
 // Message events for readmsgs/writemsgs queues.
-#define EVENT_TXN_LEN				1
-#define EVENT_TXN_OFFLAST			2
-#define EVENT_TXN_DONE				3
-#define EVENT_SG_BUF_READ			4
+#define EVENT_TXN_LEN           1
+#define EVENT_TXN_OFFLAST       2
+#define EVENT_TXN_DONE          3
+#define EVENT_SG_BUF_READ       4
 
 // Constants and device offsets
-#define NUM_FPGAS					5 	// max # of FPGAs to support in a single PC
-#define MAX_CHNLS					12	// max # of channels per FPGA
-#define MAX_BUS_WIDTH_PARAM			4	// max bus width parameter
-#define SG_BUF_SIZE					(4*1024)	// size of shared SG buffer
-#define SG_ELEMS					200 // # of SG elements to transfer at a time
-#define SPILL_BUF_SIZE				(4*1024)	// size of shared spill common buffer
+#define NUM_FPGAS               5     // max # of FPGAs to support in a single PC
+#define MAX_CHNLS               12    // max # of channels per FPGA
+#define MAX_BUS_WIDTH_PARAM     4     // max bus width parameter
+#define SG_BUF_SIZE             (4*1024)   // size of shared SG buffer
+#define SG_ELEMS                200   // # of SG elements to transfer at a time
+#define SPILL_BUF_SIZE          (4*1024)   // size of shared spill common buffer
 
-#define RX_SG_LEN_REG_OFF			0x0	// config offset for RX SG buf length
-#define RX_SG_ADDR_LO_REG_OFF		0x1	// config offset for RX SG buf low addr
-#define RX_SG_ADDR_HI_REG_OFF		0x2	// config offset for RX SG buf high addr
-#define RX_LEN_REG_OFF				0x3	// config offset for RX txn length
-#define RX_OFFLAST_REG_OFF			0x4	// config offset for RX txn last/offset
-#define RX_TNFR_LEN_REG_OFF			0xD	// config offset for RX transfer length
-#define TX_SG_LEN_REG_OFF			0x5	// config offset for TX SG buf length
-#define TX_SG_ADDR_LO_REG_OFF		0x6	// config offset for TX SG buf low addr
-#define TX_SG_ADDR_HI_REG_OFF		0x7	// config offset for TX SG buf high addr
-#define TX_LEN_REG_OFF				0x8	// config offset for TX txn length
-#define TX_OFFLAST_REG_OFF			0x9	// config offset for TX txn last/offset
-#define TX_TNFR_LEN_REG_OFF			0xE	// config offset for TX transfer length
+#define RX_SG_LEN_REG_OFF       0x0   // config offset for RX SG buf length
+#define RX_SG_ADDR_LO_REG_OFF   0x1   // config offset for RX SG buf low addr
+#define RX_SG_ADDR_HI_REG_OFF   0x2   // config offset for RX SG buf high addr
+#define RX_LEN_REG_OFF          0x3   // config offset for RX txn length
+#define RX_OFFLAST_REG_OFF      0x4   // config offset for RX txn last/offset
+#define RX_TNFR_LEN_REG_OFF     0xD   // config offset for RX transfer length
+#define TX_SG_LEN_REG_OFF       0x5   // config offset for TX SG buf length
+#define TX_SG_ADDR_LO_REG_OFF   0x6   // config offset for TX SG buf low addr
+#define TX_SG_ADDR_HI_REG_OFF   0x7   // config offset for TX SG buf high addr
+#define TX_LEN_REG_OFF          0x8   // config offset for TX txn length
+#define TX_OFFLAST_REG_OFF      0x9   // config offset for TX txn last/offset
+#define TX_TNFR_LEN_REG_OFF     0xE   // config offset for TX transfer length
 
-#define INFO_REG_OFF				0xA	// config offset for link info
+#define INFO_REG_OFF            0xA   // config offset for link info
 
-#define IRQ_REG0_OFF				0xB	// config offset for interrupt reg 0
-#define IRQ_REG1_OFF				0xC	// config offset for interrupt reg 1
+#define IRQ_REG0_OFF            0xB   // config offset for interrupt reg 0
+#define IRQ_REG1_OFF            0xC   // config offset for interrupt reg 1
 
 
 // Structs
 struct fpga_chnl_io
 {
-	int id;
-	int chnl;
-	unsigned int len;
-	unsigned int offset;
-	unsigned int last;
-	unsigned long long timeout;
-	char * data;
+   int id;
+   int chnl;
+   unsigned int len;
+   unsigned int offset;
+   unsigned int last;
+   unsigned long long timeout;
+   char * data;
 };
 typedef struct fpga_chnl_io fpga_chnl_io;
 
 struct fpga_info_list
 {
-	int num_fpgas;
-	int id[NUM_FPGAS];
-	int num_chnls[NUM_FPGAS];
-	char name[NUM_FPGAS][16];
-	int vendor_id[NUM_FPGAS];
-	int device_id[NUM_FPGAS];
+   int num_fpgas;
+   int id[NUM_FPGAS];
+   int num_chnls[NUM_FPGAS];
+   char name[NUM_FPGAS][16];
+   int vendor_id[NUM_FPGAS];
+   int device_id[NUM_FPGAS];
 };
 typedef struct fpga_info_list fpga_info_list;
 

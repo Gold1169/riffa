@@ -454,7 +454,8 @@ module riffa_wrapper_vc709
          .M_AXIS_RC_TKEEP               (M_AXIS_RC_TKEEP[(C_PCI_DATA_WIDTH/32)-1:0]),
          .M_AXIS_RC_TUSER               (M_AXIS_RC_TUSER[`SIG_RC_TUSER_W-1:0]),
          .S_AXIS_CC_TREADY              (S_AXIS_CC_TREADY),
-         .S_AXIS_RQ_TREADY              (S_AXIS_RQ_TREADY));
+         .S_AXIS_RQ_TREADY              (S_AXIS_RQ_TREADY)
+      );
 
     riffa
         #(.C_TAG_WIDTH                  (C_LOG_NUM_TAGS),/* TODO: Standardize declaration*/

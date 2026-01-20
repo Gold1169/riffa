@@ -86,7 +86,7 @@ void fpga_close(fpga_t * fpga);
  * value. 
  */
 int fpga_send(fpga_t * fpga, int chnl, void * data, int len, int destoff, 
-	int last, long long timeout);
+   int last, long long timeout);
 
 /**
  * Receives data from the FPGA channel chnl to the data pointer, using the 

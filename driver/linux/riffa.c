@@ -50,81 +50,85 @@
 
 struct fpga_t
 {
-	int fd;
-	int id;
+   int fd;
+   int id;
 };
 
 fpga_t * fpga_open(int id) 
 {
-	fpga_t * fpga;
+   fpga_t * fpga;
 
-	// Allocate space for the fpga_dev
-	fpga = (fpga_t *)malloc(sizeof(fpga_t));
-	if (fpga == NULL)
-		return NULL;
-	fpga->id = id;	
+   // Allocate space for the fpga_dev
+   fpga = (fpga_t *)malloc(sizeof(fpga_t));
+   if (fpga == NULL)
+      return NULL;
+   fpga->id = id;   
 
-	// Open the device file.
-	fpga->fd = open("/dev/" DEVICE_NAME, O_RDWR | O_SYNC);
-	if (fpga->fd < 0) {
-		free(fpga); 
-		return NULL;
-	}
-	
-	return fpga;
+   // Open the device file.
+   fpga->fd = open("/dev/" DEVICE_NAME, O_RDWR | O_SYNC);
+   if (fpga->fd < 0) {
+      free(fpga); 
+      return NULL;
+   }
+   
+   return fpga;
 }
 
 void fpga_close(fpga_t * fpga) 
 {
-	// Close the device file.
-	close(fpga->fd);
-	free(fpga);
+   // Close the device file.
+   close(fpga->fd);
+   free(fpga);
 }
 
 int fpga_send(fpga_t * fpga, int chnl, void * data, int len, int destoff, 
-	int last, long long timeout)
+   int last, long long timeout)
 {
-	fpga_chnl_io io;
+   fpga_chnl_io io;
 
-	io.id = fpga->id;
-	io.chnl = chnl;
-	io.len = len;
-	io.offset = destoff;
-	io.last = last;
-	io.timeout = timeout;
-	io.data = (char *)data;
+   io.id = fpga->id;
+   io.chnl = chnl;
+   io.len = len;
+   io.offset = destoff;
+   io.last = last;
+   io.timeout = timeout;
+   io.data = (char *)data;
 
-	return ioctl(fpga->fd, IOCTL_SEND, &io);
+   return ioctl(fpga->fd, IOCTL_SEND, &io);
+   /*fpga_chnl_io io 结构体里，既包含了「发送的配置参数」（通道号 chnl、长度 len、偏移 destoff、是否最后一包 last、超时 timeout），
+   也包含了「要发送的实际数据地址」(io.data)；你把这个结构体的地址传给内核，内核就能拿到所有需要的信息，帮你把数据发送到 FPGA。*/
 }
 
 int fpga_recv(fpga_t * fpga, int chnl, void * data, int len, long long timeout)
 {
-	fpga_chnl_io io;
+   fpga_chnl_io io;
 
-	io.id = fpga->id;
-	io.chnl = chnl;
-	io.len = len;
-	io.timeout = timeout;
-	io.data = (char *)data;
+   io.id = fpga->id;
+   io.chnl = chnl;
+   io.len = len;
+   io.timeout = timeout;
+   io.data = (char *)data;
 
-	return ioctl(fpga->fd, IOCTL_RECV, &io);
+   return ioctl(fpga->fd, IOCTL_RECV, &io);
 }
 
 void fpga_reset(fpga_t * fpga)
 {
-	ioctl(fpga->fd, IOCTL_RESET, fpga->id);
+   ioctl(fpga->fd, IOCTL_RESET, fpga->id);
 }
 
 int fpga_list(fpga_info_list * list) {
-	int fd;
-	int rc;
+   int fd;
+   int rc;
 
-	fd = open("/dev/" DEVICE_NAME, O_RDWR | O_SYNC);
-	if (fd < 0)
-		return fd;
-	rc = ioctl(fd, IOCTL_LIST, list);
-	close(fd);
-	return rc;
+   fd = open("/dev/" DEVICE_NAME, O_RDWR | O_SYNC);
+   /*O_RDWR = Open for Read and Write，中文含义：以「可读 + 可写」的方式打开设备。
+   开启 O_SYNC 后，所有对该设备的 IO 操作（包括write/ioctl）都会变成「同步阻塞」模式：*/
+   if (fd < 0)
+      return fd;
+   rc = ioctl(fd, IOCTL_LIST, list);
+   close(fd);
+   return rc;
 }
 
 
