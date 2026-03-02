@@ -143,7 +143,7 @@ module rxr_engine_ultrascale
     wire [1:0]                                          wStartFlags;
     wire [(C_PCI_DATA_WIDTH/32)-1:0]                    wStartMask;
     wire [C_OFFSET_WIDTH-1:0]                           wStartOffset;
-    wire [C_RX_BE_W-1:0]                                wByteEnables;                    
+    wire [C_RX_BE_W-1:0]                                wByteEnables;
     wire [`SIG_BARDECODE_W-1:0]                         wBarDecoded;
     wire                                                wHasPayload;
     

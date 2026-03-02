@@ -268,17 +268,17 @@ static inline void process_intr_vector(struct fpga_state * sc, int off,
             unsigned int vect)
 {
    // VECT_0/VECT_1 are organized from right to left (LSB to MSB) as:
-   // [ 0] TX_TXN         for channel 0 in VECT_0, channel 6 in VECT_1
-   // [ 1] TX_SG_BUF_RECVD   for channel 0 in VECT_0, channel 6 in VECT_1
-   // [ 2] TX_TXN_DONE      for channel 0 in VECT_0, channel 6 in VECT_1
-   // [ 3] RX_SG_BUF_RECVD   for channel 0 in VECT_0, channel 6 in VECT_1
-   // [ 4] RX_TXN_DONE      for channel 0 in VECT_0, channel 6 in VECT_1
+   // [ 0] TX_TXN             for channel 0 in VECT_0, channel 6 in VECT_1
+   // [ 1] TX_SG_BUF_RECVD    for channel 0 in VECT_0, channel 6 in VECT_1
+   // [ 2] TX_TXN_DONE        for channel 0 in VECT_0, channel 6 in VECT_1
+   // [ 3] RX_SG_BUF_RECVD    for channel 0 in VECT_0, channel 6 in VECT_1
+   // [ 4] RX_TXN_DONE        for channel 0 in VECT_0, channel 6 in VECT_1
    // ...
-   // [25] TX_TXN            for channel 5 in VECT_0, channel 11 in VECT_1
-   // [26] TX_SG_BUF_RECVD   for channel 5 in VECT_0, channel 11 in VECT_1
-   // [27] TX_TXN_DONE      for channel 5 in VECT_0, channel 11 in VECT_1
-   // [28] RX_SG_BUF_RECVD   for channel 5 in VECT_0, channel 11 in VECT_1
-   // [29] RX_TXN_DONE      for channel 5 in VECT_0, channel 11 in VECT_1
+   // [25] TX_TXN             for channel 5 in VECT_0, channel 11 in VECT_1
+   // [26] TX_SG_BUF_RECVD    for channel 5 in VECT_0, channel 11 in VECT_1
+   // [27] TX_TXN_DONE        for channel 5 in VECT_0, channel 11 in VECT_1
+   // [28] RX_SG_BUF_RECVD    for channel 5 in VECT_0, channel 11 in VECT_1
+   // [29] RX_TXN_DONE        for channel 5 in VECT_0, channel 11 in VECT_1
    // Positions 30 - 31 in both VECT_0 and VECT_1 are zero.
 
    unsigned int offlast;
@@ -638,126 +638,136 @@ static inline unsigned int chnl_recv(struct fpga_state * sc, int chnl,
    // Continue until we get a message or timeout.
    while (1) {
       while ((nomsg = pop_circ_queue(sc->recv[chnl]->msgs, &msg_type, &msg))) {
-         prepare_to_wait(&sc->recv[chnl]->waitq, &wait, TASK_INTERRUPTIBLE);
+      /*调用pop_queue函数检查有没有中断消息，如果没有，则nomsg为1，则让进程准备睡眠，等待*/
+         prepare_to_wait(&sc->recv[chnl]->waitq, &wait, TASK_INTERRUPTIBLE); // 把当前进程挂到 wait queue
          // Another check before we schedule.
-         if ((nomsg = pop_circ_queue(sc->recv[chnl]->msgs, &msg_type, &msg)))
-            tymeout = schedule_timeout(tymeout);
-         finish_wait(&sc->recv[chnl]->waitq, &wait);
-         if (signal_pending(current)) {
+         if ((nomsg = pop_circ_queue(sc->recv[chnl]->msgs, &msg_type, &msg))) // 再检查一次队列，防止消息在睡眠之前来了
+            tymeout = schedule_timeout(tymeout); /*如果还是没消息，就真正睡眠：最长睡 tymeout 个 jiffies
+            被以下事件唤醒：
+            wake_up(&waitq)（中断来了）
+            收到信号
+            timeout 到期*/ 
+         finish_wait(&sc->recv[chnl]->waitq, &wait); //把自己从 wait queue 摘掉：被中断唤醒/被信号打断/超时
+         if (signal_pending(current)) { // 如果用户态给这个进程发了信号（如 Ctrl+C）
             free_sg_buf(sc, sc->recv[chnl]->sg_map_0);
             free_sg_buf(sc, sc->recv[chnl]->sg_map_1);
             return -ERESTARTSYS;
          }
-         if (!nomsg)
+         if (!nomsg) // 如果有消息，跳出这一层循环，开始处理中断
             break;
          if (tymeout == 0) {
             printk(KERN_ERR "riffa: fpga:%d chnl:%d, recv timed out\n", sc->id, chnl);
             free_sg_buf(sc, sc->recv[chnl]->sg_map_0);
             free_sg_buf(sc, sc->recv[chnl]->sg_map_1);
             return (unsigned int)(recvd>>2);
-         }
+         }/*在 timeout 时间内，FPGA 没有发来期望的事件，于是：
+            打印错误
+            释放 SG buffer
+            返回已经接收的数据长度（word 数）*/
       }
       tymeout = tymeouto;
 
       // Process the message.
       switch (msg_type) {
-      case EVENT_TXN_OFFLAST:
-         // Read the offset and last flags (always before reading length)
-         offset = (((unsigned long long)(msg>>1))<<2);
-         last = (msg & 0x1);
-         break;
+         case EVENT_TXN_OFFLAST:
+            // Read the offset and last flags (always before reading length)
+            offset = (((unsigned long long)(msg>>1))<<2);
+            last = (msg & 0x1);
+            break; // 只跳出 switch，不跳出 while(1)
 
-      case EVENT_TXN_LEN:
-         // Read the length
-         length = (((unsigned long long)msg)<<2);
-         recvd = 0;
-         overflow = 0;
-         // Check for address overflow
-         max_ptr = (unsigned long)(udata + offset + length - 1);
-         if (max_ptr < udata) {
-            printk(KERN_ERR "riffa: fpga:%d chnl:%d, recv pointer address overflow\n", sc->id, chnl);
-            overflow = length;
-            length = 0;
-         }
-         // Check for capacity overflow
-         if ((offset + length) > capacity) {
-            if (offset > capacity) {
+         case EVENT_TXN_LEN:
+            // Read the length
+            length = (((unsigned long long)msg)<<2);
+            recvd = 0;
+            overflow = 0;
+            // Check for address overflow
+            max_ptr = (unsigned long)(udata + offset + length - 1);
+            if (max_ptr < udata) {
+               printk(KERN_ERR "riffa: fpga:%d chnl:%d, recv pointer address overflow\n", sc->id, chnl);
                overflow = length;
                length = 0;
             }
-            else {
-               overflow = length + offset - capacity;
-               length = capacity - offset;
+            // Check for capacity overflow
+            if ((offset + length) > capacity) {
+               if (offset > capacity) {
+                  overflow = length;
+                  length = 0;
+               }
+               else {
+                  overflow = length + offset - capacity;
+                  length = capacity - offset;
+               }
             }
-         }
-         // Use the recv common buffer to share the scatter gather elements.
-         if (length > 0 || overflow > 0) {
-            udata = udata + offset;
-            sg_map = fill_sg_buf(sc, chnl, sc->recv[chnl]->buf_addr, udata, length, overflow, DMA_FROM_DEVICE);
-            if (sg_map == NULL || sg_map->num_sg == 0)
-               return (unsigned int)(recvd>>2);
-            // Update based on the sg_mapping
-            udata += sg_map->length;
-            length -= sg_map->length;
-            overflow -= sg_map->overflow;
-            sc->recv[chnl]->sg_map_1 = sg_map;
-            // Let FPGA know about the scatter gather buffer.
-            write_reg(sc, CHNL_REG(chnl, TX_SG_ADDR_LO_REG_OFF), (sc->recv[chnl]->buf_hw_addr & 0xFFFFFFFF));
-            write_reg(sc, CHNL_REG(chnl, TX_SG_ADDR_HI_REG_OFF), ((sc->recv[chnl]->buf_hw_addr>>32) & 0xFFFFFFFF));
-            write_reg(sc, CHNL_REG(chnl, TX_SG_LEN_REG_OFF), 4 * sg_map->num_sg);
-            DEBUG_MSG(KERN_INFO "riffa: fpga:%d chnl:%d, recv sg buf populated, %d sent\n", sc->id, chnl, sg_map->num_sg);
-         }
-         break;
-
-      case EVENT_SG_BUF_READ:
-         // Ignore if we haven't received offlast/len.
-         if (last == -1)
-            break;
-         // Release the previous scatter gather data.
-         if (sc->recv[chnl]->sg_map_0 != NULL)
-            recvd += sc->recv[chnl]->sg_map_0->length;
-         free_sg_buf(sc, sc->recv[chnl]->sg_map_0);
-         sc->recv[chnl]->sg_map_0 = NULL;
-         // Populate the common buffer with more scatter gather data?
-         if (length > 0 || overflow > 0) {
-            sg_map = fill_sg_buf(sc, chnl, sc->recv[chnl]->buf_addr, udata, length, overflow, DMA_FROM_DEVICE);
-            if (sg_map == NULL || sg_map->num_sg == 0) {
-               free_sg_buf(sc, sc->recv[chnl]->sg_map_0);
-               free_sg_buf(sc, sc->recv[chnl]->sg_map_1);
-               return (unsigned int)(recvd>>2);
+            // Use the recv common buffer to share the scatter gather elements.
+            if (length > 0 || overflow > 0) {
+               udata = udata + offset;
+               sg_map = fill_sg_buf(sc, chnl, sc->recv[chnl]->buf_addr, udata, length, overflow, DMA_FROM_DEVICE);
+               if (sg_map == NULL || sg_map->num_sg == 0)
+                  return (unsigned int)(recvd>>2);
+               // Update based on the sg_mapping
+               udata += sg_map->length;
+               length -= sg_map->length;
+               overflow -= sg_map->overflow;
+               sc->recv[chnl]->sg_map_1 = sg_map;
+               // Let FPGA know about the scatter gather buffer.
+               write_reg(sc, CHNL_REG(chnl, TX_SG_ADDR_LO_REG_OFF), (sc->recv[chnl]->buf_hw_addr & 0xFFFFFFFF));
+               write_reg(sc, CHNL_REG(chnl, TX_SG_ADDR_HI_REG_OFF), ((sc->recv[chnl]->buf_hw_addr>>32) & 0xFFFFFFFF));
+               write_reg(sc, CHNL_REG(chnl, TX_SG_LEN_REG_OFF), 4 * sg_map->num_sg);
+               DEBUG_MSG(KERN_INFO "riffa: fpga:%d chnl:%d, recv sg buf populated, %d sent\n", sc->id, chnl, sg_map->num_sg);
             }
-            // Update based on the sg_mapping
-            udata += sg_map->length;
-            length -= sg_map->length;
-            overflow -= sg_map->overflow;
-            sc->recv[chnl]->sg_map_0 = sc->recv[chnl]->sg_map_1;
-            sc->recv[chnl]->sg_map_1 = sg_map;
-            write_reg(sc, CHNL_REG(chnl, TX_SG_ADDR_LO_REG_OFF), (sc->recv[chnl]->buf_hw_addr & 0xFFFFFFFF));
-            write_reg(sc, CHNL_REG(chnl, TX_SG_ADDR_HI_REG_OFF), ((sc->recv[chnl]->buf_hw_addr>>32) & 0xFFFFFFFF));
-            write_reg(sc, CHNL_REG(chnl, TX_SG_LEN_REG_OFF), 4 * sg_map->num_sg);
-            DEBUG_MSG(KERN_INFO "riffa: fpga:%d chnl:%d, recv sg buf populated, %d sent\n", sc->id, chnl, sg_map->num_sg);
-         }
-         break;
-
-      case EVENT_TXN_DONE:
-         // Ignore if we haven't received offlast/len.
-         if (last == -1)
             break;
-         // Update with the true value of words transferred.
-         recvd = (((unsigned long long)msg)<<2);
-         // Return if this was the last transaction.
-         free_sg_buf(sc, sc->recv[chnl]->sg_map_0);
-         free_sg_buf(sc, sc->recv[chnl]->sg_map_1);
-         sc->recv[chnl]->sg_map_0 = NULL;
-         sc->recv[chnl]->sg_map_1 = NULL;
-         DEBUG_MSG(KERN_INFO "riffa: fpga:%d chnl:%d, received %d words\n", sc->id, chnl, (unsigned int)(recvd>>2));
-         if (last)
-            return (unsigned int)(recvd>>2);
-         break;
+         /*在recv侧，driver收到FPGA的发起的中断，表示FPGA要发送数据了，先发送EVENT_TXN_OFFLAST事件，传递这次传送的offset和last信息
+         然后会发送EVENT_TXN_LEN中断，明确这次传输要传输的长度，此时driver会给FPGA下发描述符，也就是更新sg buffer
+         如果FPGA把描述符用尽，则会发起EVENT_SG_BUF_READ中断，此时driver会更新sg buffer，也就是下发新一批描述符*/
+         case EVENT_SG_BUF_READ:
+            // Ignore if we haven't received offlast/len.
+            if (last == -1)
+               break;
+            // Release the previous scatter gather data.
+            if (sc->recv[chnl]->sg_map_0 != NULL)
+               recvd += sc->recv[chnl]->sg_map_0->length;
+            free_sg_buf(sc, sc->recv[chnl]->sg_map_0);
+            sc->recv[chnl]->sg_map_0 = NULL;
+            // Populate the common buffer with more scatter gather data?
+            if (length > 0 || overflow > 0) {
+               sg_map = fill_sg_buf(sc, chnl, sc->recv[chnl]->buf_addr, udata, length, overflow, DMA_FROM_DEVICE);
+               if (sg_map == NULL || sg_map->num_sg == 0) {
+                  free_sg_buf(sc, sc->recv[chnl]->sg_map_0);
+                  free_sg_buf(sc, sc->recv[chnl]->sg_map_1);
+                  return (unsigned int)(recvd>>2);
+               }
+               // Update based on the sg_mapping
+               udata += sg_map->length;
+               length -= sg_map->length;
+               overflow -= sg_map->overflow;
+               sc->recv[chnl]->sg_map_0 = sc->recv[chnl]->sg_map_1;
+               sc->recv[chnl]->sg_map_1 = sg_map;
+               write_reg(sc, CHNL_REG(chnl, TX_SG_ADDR_LO_REG_OFF), (sc->recv[chnl]->buf_hw_addr & 0xFFFFFFFF));
+               write_reg(sc, CHNL_REG(chnl, TX_SG_ADDR_HI_REG_OFF), ((sc->recv[chnl]->buf_hw_addr>>32) & 0xFFFFFFFF));
+               write_reg(sc, CHNL_REG(chnl, TX_SG_LEN_REG_OFF), 4 * sg_map->num_sg);
+               DEBUG_MSG(KERN_INFO "riffa: fpga:%d chnl:%d, recv sg buf populated, %d sent\n", sc->id, chnl, sg_map->num_sg);
+            }
+            break;
 
-      default: 
-         printk(KERN_ERR "riffa: fpga:%d chnl:%d, received unknown msg: %08x\n", sc->id, chnl, msg);
-         break;
+         case EVENT_TXN_DONE:
+            // Ignore if we haven't received offlast/len.
+            if (last == -1)
+               break;
+            // Update with the true value of words transferred.
+            recvd = (((unsigned long long)msg)<<2);
+            // Return if this was the last transaction.
+            free_sg_buf(sc, sc->recv[chnl]->sg_map_0);
+            free_sg_buf(sc, sc->recv[chnl]->sg_map_1);
+            sc->recv[chnl]->sg_map_0 = NULL;
+            sc->recv[chnl]->sg_map_1 = NULL;
+            DEBUG_MSG(KERN_INFO "riffa: fpga:%d chnl:%d, received %d words\n", sc->id, chnl, (unsigned int)(recvd>>2));
+            if (last)
+               return (unsigned int)(recvd>>2);
+            break;
+
+         default: 
+            printk(KERN_ERR "riffa: fpga:%d chnl:%d, received unknown msg: %08x\n", sc->id, chnl, msg);
+            break;
       }
    }
 
@@ -1244,7 +1254,7 @@ static int __devinit fpga_probe(struct pci_dev *dev, const struct pci_device_id 
    }
 
    // Request an interrupt
-   error = request_irq(dev->irq, intrpt_handler, IRQF_SHARED, sc->name, sc);
+   error = request_irq(dev->irq, intrpt_handler, IRQF_SHARED, sc->name, sc); // 把前面的中断处理函数注册给内核的中断处理函数
    if (error != 0) {
       printk(KERN_ERR "riffa: request_irq(%d) returned error: %d\n", dev->irq, error);
       pci_disable_msi(dev);

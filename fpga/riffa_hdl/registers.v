@@ -51,6 +51,10 @@ module registers
      // Interface: Resets
      input                                     RST_IN,
 
+     input [`SIG_CORESETTINGS_W-1:0]           CORE_SETTINGS, 
+     output                                    CORE_SETTINGS_READY,
+     output [C_NUM_VECTORS-1:0]                INTR_VECTOR_READY,
+     
      // Interface: RXR Engine
      input [C_PCI_DATA_WIDTH-1:0]              RXR_DATA,
      input                                     RXR_DATA_VALID,
@@ -109,11 +113,8 @@ module registers
      input [(`SIG_OFFLAST_W*C_NUM_CHNL)-1:0]   CHNL_TX_OFFLAST,
      input [(`SIG_TXDONELEN_W*C_NUM_CHNL)-1:0] CHNL_TX_DONELEN,
      input [(`SIG_RXDONELEN_W*C_NUM_CHNL)-1:0] CHNL_RX_DONELEN,
-     input [`SIG_CORESETTINGS_W-1:0]           CORE_SETTINGS, 
      output [C_NUM_CHNL-1:0]                   CHNL_TX_LEN_READY,
      output [C_NUM_CHNL-1:0]                   CHNL_TX_OFFLAST_READY,
-     output                                    CORE_SETTINGS_READY,
-     output [C_NUM_VECTORS-1:0]                INTR_VECTOR_READY,
      output [C_NUM_CHNL-1:0]                   CHNL_TX_DONE_READY,
      output [C_NUM_CHNL-1:0]                   CHNL_RX_DONE_READY,
      output                                    CHNL_NAME_READY,

@@ -53,7 +53,10 @@ module riffa_wrapper_vc709
       parameter C_MAX_PAYLOAD_BYTES = 256,
       parameter C_LOG_NUM_TAGS = 5, 
       parameter C_FPGA_ID = "V709") 
-    (//Interface: CQ Ultrascale (RXR)
+    (
+     input                                        USER_CLK,
+     input                                        USER_RESET,
+      //Interface: CQ Ultrascale (RXR)
      input                                        M_AXIS_CQ_TVALID,
      input                                        M_AXIS_CQ_TLAST,
      input [C_PCI_DATA_WIDTH-1:0]                 M_AXIS_CQ_TDATA,
@@ -85,28 +88,11 @@ module riffa_wrapper_vc709
      output [(C_PCI_DATA_WIDTH/32)-1:0]           S_AXIS_RQ_TKEEP,
      output [`SIG_RQ_TUSER_W-1:0]                 S_AXIS_RQ_TUSER,
 
-     input                                        USER_CLK,
-     input                                        USER_RESET,
-
-     output [3:0]                                 CFG_INTERRUPT_INT,
-     output [1:0]                                 CFG_INTERRUPT_PENDING,
      input [1:0]                                  CFG_INTERRUPT_MSI_ENABLE,
      input                                        CFG_INTERRUPT_MSI_MASK_UPDATE,
-     input [31:0]                                 CFG_INTERRUPT_MSI_DATA,
-     output [3:0]                                 CFG_INTERRUPT_MSI_SELECT,
-     output [31:0]                                CFG_INTERRUPT_MSI_INT,
-     output [63:0]                                CFG_INTERRUPT_MSI_PENDING_STATUS,
      input                                        CFG_INTERRUPT_MSI_SENT,
      input                                        CFG_INTERRUPT_MSI_FAIL,
-     output [2:0]                                 CFG_INTERRUPT_MSI_ATTR,
-     output                                       CFG_INTERRUPT_MSI_TPH_PRESENT,
-     output [1:0]                                 CFG_INTERRUPT_MSI_TPH_TYPE,
-     output [8:0]                                 CFG_INTERRUPT_MSI_TPH_ST_TAG,
-     output [2:0]                                 CFG_INTERRUPT_MSI_FUNCTION_NUMBER,
-
-     input [7:0]                                  CFG_FC_CPLH,
-     input [11:0]                                 CFG_FC_CPLD,
-     output [2:0]                                 CFG_FC_SEL,
+     input [31:0]                                 CFG_INTERRUPT_MSI_DATA,
 
      input [3:0]                                  CFG_NEGOTIATED_WIDTH, // CONFIG_LINK_WIDTH
      input [2:0]                                  CFG_CURRENT_SPEED, // CONFIG_LINK_RATE
@@ -114,6 +100,21 @@ module riffa_wrapper_vc709
      input [2:0]                                  CFG_MAX_READ_REQ, // CONFIG_MAX_READ_REQUEST
      input [7:0]                                  CFG_FUNCTION_STATUS, // [2] = CONFIG_BUS_MASTER_ENABLE
      input [1:0]                                  CFG_RCB_STATUS,
+
+     input [7:0]                                  CFG_FC_CPLH,
+     input [11:0]                                 CFG_FC_CPLD,
+     output [2:0]                                 CFG_FC_SEL,
+
+     output [3:0]                                 CFG_INTERRUPT_INT,
+     output [1:0]                                 CFG_INTERRUPT_PENDING,
+     output [3:0]                                 CFG_INTERRUPT_MSI_SELECT,
+     output [31:0]                                CFG_INTERRUPT_MSI_INT,
+     output [63:0]                                CFG_INTERRUPT_MSI_PENDING_STATUS,
+     output [2:0]                                 CFG_INTERRUPT_MSI_ATTR,
+     output                                       CFG_INTERRUPT_MSI_TPH_PRESENT,
+     output [1:0]                                 CFG_INTERRUPT_MSI_TPH_TYPE,
+     output [8:0]                                 CFG_INTERRUPT_MSI_TPH_ST_TAG,
+     output [2:0]                                 CFG_INTERRUPT_MSI_FUNCTION_NUMBER,
     
      output                                       PCIE_CQ_NP_REQ,
 
@@ -288,10 +289,10 @@ module riffa_wrapper_vc709
     assign config_max_read_request_size = CFG_MAX_READ_REQ; // CONFIG_MAX_READ_REQUEST
     assign config_cpl_boundary_sel =  CFG_RCB_STATUS[0];
     assign config_interrupt_msienable = CFG_INTERRUPT_MSI_ENABLE[0];
-    assign config_max_cpl_data = CFG_FC_CPLD;    
-    assign config_max_cpl_hdr = CFG_FC_CPLH;    
+    assign config_max_cpl_data = CFG_FC_CPLD;
+    assign config_max_cpl_hdr = CFG_FC_CPLH;
 
-    assign CFG_FC_SEL = 3'b001; // Always display credit maximum for the signals below
+    assign CFG_FC_SEL = 3'b001; // Always display credit maximum for the signals below. Receive credit limit
     assign CFG_INTERRUPT_MSI_INT = {31'b0,intr_msi_request};
     assign CFG_INTERRUPT_MSI_SELECT = 0;
     assign CFG_INTERRUPT_INT = 0;
